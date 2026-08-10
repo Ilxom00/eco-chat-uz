@@ -725,7 +725,9 @@ async def submit_answer(
         return {"error": "Invalid answer ID", "answer_status": "ERROR", "attempt_completed": False}
 
     # Determine correctness from snapshot (not from live DB — for historical integrity)
-    is_correct = str(etq.correct_answer_id) == selected_answer_id
+    is_correct = str(etq.correct_answer_id).strip() == str(selected_answer_id).strip()
+    logger.debug("Answer check: correct_id=%s selected=%s is_correct=%s",
+                 etq.correct_answer_id, selected_answer_id, is_correct)
 
     # Record answer
     response_time_ms = int((now - _make_aware(aq.question_started_at)).total_seconds() * 1000) if aq.question_started_at else 0
