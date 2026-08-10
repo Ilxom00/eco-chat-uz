@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 480  # 8 hours
 
     # ── Business Rules ───────────────────────────────────────
-    question_timer_seconds: int = 30
+    question_timer_seconds: int = 60
     min_questions_per_topic: int = 15
     attempt2_min_wait_seconds: int = 600   # 10 minutes (hidden from user)
     max_attempts_per_topic: int = 2
