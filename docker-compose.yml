@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ecochat
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecochat_pass}
+      POSTGRES_DB: ecochat_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - backup_data:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecochat -d ecochat_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecochat-network
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ecochat-network
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - backup_data:/backups
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ecochat-network
+
+  frontend:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+    networks:
+      - ecochat-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  backup_data:
+
+networks:
+  ecochat-network:
+    driver: bridge
