@@ -2,10 +2,11 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.database import get_db
+from app.database import get_db, engine
 from app.redis_client import get_redis
 from app.api.deps import get_internal_token
 from app.services import employee_service, branch_service, topic_service, test_engine
+from app.seeds.seed import seed_topics_and_questions
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ async def register(data: dict, db: AsyncSession = Depends(get_db)):
             data.get("telegram_user_id"), 
             data.get("full_name"), 
             resolved_bid, 
-            data.get("phone")
+            data.get("phone") or ""
         )
         return {"employee_id": str(emp.id), "success": True}
     except Exception as e:
@@ -64,6 +65,44 @@ async def get_status(telegram_user_id: int, db: AsyncSession = Depends(get_db)):
         "employee": emp_dict,
         "registration_state": emp.registration_state,
         "topics": topics_list
+    }
+
+@router.get("/employee/{telegram_user_id}/topics")
+async def get_employee_topics(telegram_user_id: int, db: AsyncSession = Depends(get_db)):
+    emp = await employee_service.get_employee_by_telegram_id(db, telegram_user_id)
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    topics_raw = await topic_service.get_all_topics_status_for_employee(db, str(emp.id))
+
+    # Auto-seed if empty
+    if not topics_raw:
+        await seed_topics_and_questions(engine, force=True)
+        topics_raw = await topic_service.get_all_topics_status_for_employee(db, str(emp.id))
+
+    result = []
+    for item in topics_raw:
+        t = item.get("topic")
+        if t:
+            result.append({
+                "id": str(t.id),
+                "name": f"{t.short_name} — {t.full_name}",
+                "short_name": t.short_name,
+                "full_name": t.full_name,
+                "status": item.get("status", "available"),
+            })
+    return result
+
+@router.get("/topics/{topic_id}")
+async def get_topic_detail(topic_id: str, db: AsyncSession = Depends(get_db)):
+    topic = await topic_service.get_topic_by_id(db, topic_id)
+    if not topic:
+        raise HTTPException(status_code=404, detail="Topic not found")
+    return {
+        "id": str(topic.id),
+        "name": f"{topic.short_name} — {topic.full_name}",
+        "short_name": topic.short_name,
+        "full_name": topic.full_name,
     }
 
 @router.post("/attempt/start")
