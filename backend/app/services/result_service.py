@@ -382,13 +382,35 @@ async def get_attempt_detail_for_dashboard(
         completed_at = att[7]
         duration_str = "—"
         if started_at and completed_at:
-            secs = int((completed_at - started_at).total_seconds())
-            mins = secs // 60
-            rem_secs = secs % 60
-            if mins > 0:
-                duration_str = f"{mins} дақиқа {rem_secs} сония"
-            else:
-                duration_str = f"{rem_secs} сония"
+            from datetime import datetime
+            if isinstance(started_at, str):
+                try:
+                    started_at = datetime.fromisoformat(started_at.replace("Z", "+00:00"))
+                except Exception:
+                    try:
+                        started_at = datetime.strptime(started_at.split(".")[0], "%Y-%m-%d %H:%M:%S")
+                    except Exception:
+                        pass
+            if isinstance(completed_at, str):
+                try:
+                    completed_at = datetime.fromisoformat(completed_at.replace("Z", "+00:00"))
+                except Exception:
+                    try:
+                        completed_at = datetime.strptime(completed_at.split(".")[0], "%Y-%m-%d %H:%M:%S")
+                    except Exception:
+                        pass
+
+            try:
+                secs = int((completed_at - started_at).total_seconds())
+                mins = secs // 60
+                rem_secs = secs % 60
+                if mins > 0:
+                    duration_str = f"{mins} дақиқа {rem_secs} сония"
+                else:
+                    duration_str = f"{rem_secs} сония"
+            except Exception:
+                duration_str = "—"
+
 
         # 3. Get attempt questions ordered by display_order
         aq_res = await db.execute(text("""
