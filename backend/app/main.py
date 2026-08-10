@@ -71,6 +71,40 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("❌ Superadmin creation failed: {}", e)
 
+    # Seed branches (official DEE branches of Uzbekistan)
+    try:
+        _BRANCHES = [
+            "Davlat Ekologik ekspertizasi markazi (Markaziy apparat)",
+            "Qoraqalpog'iston Respublikasi filiali",
+            "Andijon viloyati filiali",
+            "Buxoro viloyati filiali",
+            "Jizzax viloyati filiali",
+            "Qashqadaryo viloyati filiali",
+            "Navoiy viloyati filiali",
+            "Namangan viloyati filiali",
+            "Samarqand viloyati filiali",
+            "Surxondaryo viloyati filiali",
+            "Sirdaryo viloyati filiali",
+            "Farg'ona viloyati filiali",
+            "Toshkent viloyati filiali",
+            "Xorazm viloyati filiali",
+            "Toshkent shahar filiali",
+        ]
+        async with engine.begin() as conn:
+            existing = (await conn.execute(_text("SELECT COUNT(*) FROM branches"))).scalar()
+            if not existing:
+                for i, bname in enumerate(_BRANCHES, 1):
+                    await conn.execute(
+                        _text("INSERT INTO branches (id, name, sort_order, is_active) VALUES (:id, :n, :s, 1)"),
+                        {"id": str(_uuid.uuid4()), "n": bname, "s": i}
+                    )
+                logger.info("✅ {} ta filial yaratildi", len(_BRANCHES))
+            else:
+                logger.info("✅ Filiallar allaqachon bor ({})", existing)
+    except Exception as e:
+        logger.error("❌ Branch seeding failed: {}", e)
+
+
     # Redis connectivity check
     try:
         from app.redis_client import redis_client
