@@ -2,13 +2,13 @@
 """
 Registration flow:
   ASK_BRANCH (1) → user selects branch
-  ASK_FULLNAME (0) → user enters full name
+  ASK_FULLNAME (0) → user enters full name (Cyrillic)
   ASK_PHONE (2) → user shares phone → registers
 """
 from telegram import Update
 from telegram.ext import ContextTypes
 from .. import messages
-from ..keyboards import get_branch_keyboard, get_phone_keyboard, get_main_menu_keyboard
+from ..keyboards import get_phone_keyboard, get_main_menu_keyboard
 from ..api_client import bot_api
 
 ASK_FULLNAME = 0
@@ -26,23 +26,31 @@ async def handle_branch(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not data.startswith("branch:"):
         return ASK_BRANCH
 
-    branch_id = data.split(":", 1)[1]   # UUID string, NOT int
-    context.user_data["branch_id"] = branch_id
+    branch_id = data.split(":", 1)[1]
+    branch_name = "Номаълум филиал"
 
-    # Fetch branch name for display
+    # Try fetching branches to find exact name
     try:
         resp = await bot_api.get_branches()
-        branches = resp.get("branches", [])
-        branch_name = next(
-            (b["name"] for b in branches if str(b["id"]) == str(branch_id)),
-            "Номаълум филиал"
-        )
+        branches = resp.get("branches", []) if isinstance(resp, dict) else []
+        found = next((b for b in branches if str(b["id"]) == str(branch_id)), None)
+        if found:
+            branch_name = found["name"]
+            context.user_data["branch_id"] = str(found["id"])
     except Exception:
-        branch_name = "Номаълум филиал"
+        pass
+
+    if branch_name == "Номаълум филиал":
+        # Check fallback list
+        from .start import FALLBACK_BRANCHES
+        found_fb = next((b for b in FALLBACK_BRANCHES if b["id"] == branch_id), None)
+        if found_fb:
+            branch_name = found_fb["name"]
+            context.user_data["branch_name"] = branch_name
+            context.user_data["branch_id"] = None  # backend will match by branch_name if needed or keep None
 
     context.user_data["branch_name"] = branch_name
 
-    # Confirm selection and ask for full name
     await query.edit_message_text(
         f"✅ Филиал: <b>{branch_name}</b>\n\n"
         f"{messages.ASK_FULLNAME}",
@@ -55,7 +63,7 @@ async def handle_fullname(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Step 2: User enters full name (Cyrillic)."""
     full_name = update.message.text.strip() if update.message.text else ""
 
-    if len(full_name) < 5:
+    if len(full_name) < 3:
         await update.message.reply_text(messages.FULLNAME_TOO_SHORT)
         return ASK_FULLNAME
 
