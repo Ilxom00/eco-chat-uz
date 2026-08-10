@@ -108,16 +108,17 @@ async def lifespan(app: FastAPI):
                 row = (await conn.execute(_text("SELECT id FROM admins WHERE username = :u"), {"u": u})).fetchone()
                 if row:
                     await conn.execute(
-                        _text("UPDATE admins SET password_hash = :pw, is_active = 1 WHERE username = :u"),
+                        _text("UPDATE admins SET password_hash = :pw, is_active = TRUE WHERE username = :u"),
                         {"pw": _pwd_hash, "u": u}
                     )
                 else:
                     _aid = str(_uuid.uuid4())
                     await conn.execute(
-                        _text("INSERT INTO admins (id, username, password_hash, full_name, is_active) VALUES (:id, :u, :pw, :fn, 1)"),
+                        _text("INSERT INTO admins (id, username, password_hash, full_name, is_active) VALUES (:id, :u, :pw, :fn, TRUE)"),
                         {"id": _aid, "u": u, "pw": _pwd_hash, "fn": "Bosh Administrator"}
                     )
             logger.info("✅ Superadmin accounts ('user' & 'admin') updated with active status")
+
     except Exception as e:
         logger.error("❌ Superadmin creation failed: {}", e)
 
