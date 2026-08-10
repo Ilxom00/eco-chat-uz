@@ -19,6 +19,7 @@ engine = create_async_engine(
     connect_args=_connect_args,
 )
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+async_session_maker = AsyncSessionLocal
 
 
 async def get_db():
