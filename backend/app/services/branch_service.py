@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import text
 from app.models.branch import Branch
 from sqlalchemy import update
 
@@ -23,7 +24,6 @@ async def create_branch(db: AsyncSession, name: str, sort_order: int = None) -> 
     return branch
 
 async def archive_branch(db: AsyncSession, branch_id: str) -> Branch:
-    # check no employees
     result = await db.execute(select(Branch).filter(Branch.id == branch_id))
     branch = result.scalar_one_or_none()
     if branch:
@@ -34,7 +34,6 @@ async def archive_branch(db: AsyncSession, branch_id: str) -> Branch:
 
 async def reorder_branch(db: AsyncSession, branch_id: str, direction: str) -> list[Branch]:
     branches = await get_all_branches(db, include_archived=True)
-    # Simple reorder logic to swap
     idx = next((i for i, b in enumerate(branches) if str(b.id) == branch_id), -1)
     if idx != -1:
         if direction == "up" and idx > 0:
@@ -43,3 +42,26 @@ async def reorder_branch(db: AsyncSession, branch_id: str, direction: str) -> li
             branches[idx].sort_order, branches[idx+1].sort_order = branches[idx+1].sort_order, branches[idx].sort_order
         await db.commit()
     return sorted(branches, key=lambda x: x.sort_order)
+
+async def delete_branch(db: AsyncSession, branch_id: str) -> bool:
+    """Filialni o'chiradi. Bog'liq xodimlarning branch_id ni NULL qiladi."""
+    try:
+        # Detach employees from this branch
+        await db.execute(
+            text("UPDATE employees SET branch_id = NULL WHERE branch_id = :bid"),
+            {"bid": branch_id}
+        )
+        # Delete branch
+        await db.execute(text("DELETE FROM branches WHERE id = :bid"), {"bid": branch_id})
+        await db.commit()
+        return True
+    except Exception as e:
+        await db.rollback()
+        raise e
+
+async def get_employee_count_in_branch(db: AsyncSession, branch_id: str) -> int:
+    result = await db.execute(
+        text("SELECT COUNT(*) FROM employees WHERE branch_id = :bid"),
+        {"bid": branch_id}
+    )
+    return result.scalar() or 0
