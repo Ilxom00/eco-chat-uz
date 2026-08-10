@@ -142,6 +142,23 @@ class BotAPIClient:
             res = await test_engine.get_attempt_results(db, attempt_id)
             return res
 
+    async def handle_timeout(self, attempt_question_id: str) -> Dict[str, Any]:
+        """Called when countdown expires — auto-advances to next question."""
+        async with AsyncSessionLocal() as db:
+            res = await test_engine.handle_timeout(db, attempt_question_id)
+            # If not completed, also return next question data
+            if not res.get("attempt_completed"):
+                # find attempt from aq
+                from app.models.attempt import AttemptQuestion
+                from sqlalchemy.future import select as sa_select
+                aq = (await db.execute(
+                    sa_select(AttemptQuestion).where(AttemptQuestion.id == attempt_question_id)
+                )).scalar_one_or_none()
+                if aq:
+                    nq = await test_engine.get_current_question_full(db, str(aq.attempt_id))
+                    res["next_question"] = nq
+            return res
+
     async def get_employee_topic_status(self, telegram_user_id: int, topic_id: str) -> Dict[str, Any]:
         """Get assignment + attempt status for employee+topic. Used to resume in-progress attempts."""
         from app.models.attempt import EmployeeTopicAssignment, TestAttempt
