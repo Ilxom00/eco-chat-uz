@@ -1,9 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func, case
+from sqlalchemy import func
 from app.models.employee import Employee
-from app.models.test_attempt import TestAttempt
-from app.models.employee_topic_assignment import EmployeeTopicAssignment
+from app.models.attempt import TestAttempt, EmployeeTopicAssignment
 
 async def get_employee_topic_result(db: AsyncSession, employee_id: str, topic_id: str) -> dict:
     return {}
