@@ -161,10 +161,10 @@ const Questions = {
 
                 <div style="font-weight:700;font-size:13px;color:#374151;margin-bottom:10px;">4 та вариант (тўғри жавобни танланг):</div>
 
-                ${['A', 'B', 'C', 'D'].map((label, idx) => `
+                ${['А', 'Б', 'В', 'Г'].map((label, idx) => `
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;background:#f9fafb;padding:10px 14px;border-radius:10px;border:1px solid #e5e7eb;">
                         <input type="radio" name="correctAnswerRadio" id="radio_${label}" value="${idx}" ${idx === 0 ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;accent-color:#166534;">
-                        <label for="radio_${label}" style="font-weight:800;font-size:14px;color:#166534;width:24px;">${label}:</label>
+                        <label for="radio_${label}" style="font-weight:800;font-size:15px;color:#166534;width:24px;">${label}:</label>
                         <input type="text" id="ans_input_${idx}" placeholder="${label} вариант жавоби" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;">
                     </div>
                 `).join('')}
@@ -186,14 +186,15 @@ const Questions = {
 
         const answers = [];
         const selectedCorrectIdx = parseInt(document.querySelector('input[name="correctAnswerRadio"]:checked').value, 10);
+        const labels = ['А', 'Б', 'В', 'Г'];
 
         for (let i = 0; i < 4; i++) {
             const val = document.getElementById(`ans_input_${i}`).value.trim();
-            if (!val) { alert(`Илтимос, барча 4 та вариантни тўлдиринг (${['A','B','C','D'][i]} вариант бўш)!`); return; }
+            if (!val) { alert(`Илтимос, барча 4 та вариантни тўлдиринг (${labels[i]} вариант бўш)!`); return; }
             answers.push({
                 text: val,
                 is_correct: (i === selectedCorrectIdx),
-                option_label: ['A', 'B', 'C', 'D'][i]
+                option_label: labels[i]
             });
         }
 
@@ -232,6 +233,8 @@ const Questions = {
             if (opt === correctText) correctIdx = idx;
         });
 
+        const labels = ['А', 'Б', 'В', 'Г'];
+
         const modal = document.createElement('div');
         modal.id = 'editQuestionModal';
         modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.65);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;';
@@ -248,10 +251,10 @@ const Questions = {
 
                 <div style="font-weight:700;font-size:13px;color:#374151;margin-bottom:10px;">4 та вариант (тўғри жавобни танланг):</div>
 
-                ${['A', 'B', 'C', 'D'].map((label, idx) => `
+                ${labels.map((label, idx) => `
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;background:#f9fafb;padding:10px 14px;border-radius:10px;border:1px solid #e5e7eb;">
                         <input type="radio" name="editCorrectAnswerRadio" id="edit_radio_${label}" value="${idx}" ${idx === correctIdx ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;accent-color:#166534;">
-                        <label for="edit_radio_${label}" style="font-weight:800;font-size:14px;color:#166534;width:24px;">${label}:</label>
+                        <label for="edit_radio_${label}" style="font-weight:800;font-size:15px;color:#166534;width:24px;">${label}:</label>
                         <input type="text" id="edit_ans_input_${idx}" value="${(options[idx] || '').replace(/"/g, '&quot;')}" placeholder="${label} вариант жавоби" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;">
                     </div>
                 `).join('')}
@@ -273,14 +276,15 @@ const Questions = {
 
         const answers = [];
         const selectedCorrectIdx = parseInt(document.querySelector('input[name="editCorrectAnswerRadio"]:checked').value, 10);
+        const labels = ['А', 'Б', 'В', 'Г'];
 
         for (let i = 0; i < 4; i++) {
             const val = document.getElementById(`edit_ans_input_${i}`).value.trim();
-            if (!val) { alert(`Илтимос, барча 4 та вариантни тўлдиринг (${['A','B','C','D'][i]} вариант бўш)!`); return; }
+            if (!val) { alert(`Илтимос, барча 4 та вариантни тўлдиринг (${labels[i]} вариант бўш)!`); return; }
             answers.push({
                 text: val,
                 is_correct: (i === selectedCorrectIdx),
-                option_label: ['A', 'B', 'C', 'D'][i]
+                option_label: labels[i]
             });
         }
 
