@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 eco-chat.uz — /start Command Handler
-1. Registered user → show main menu
-2. New user       → show welcome + branch selection keyboard
+1. Registered user → show main menu directly (persists even if bot chat is deleted and restarted)
+2. New user       → show welcome text + inline branch selection buttons
 """
 from __future__ import annotations
 
@@ -16,11 +16,28 @@ from app.bot.api_client import bot_api
 
 logger = logging.getLogger(__name__)
 
-# Conversation states (must match registration.py and bot.py)
 ASK_BRANCH   = 1
 ASK_FULLNAME = 0
 ASK_PHONE    = 2
 MAIN_MENU    = 10
+
+FALLBACK_BRANCHES = [
+    {"id": "fb_1",  "name": "Давлат Экологик экспертизаси маркази (Марказий аппарат)"},
+    {"id": "fb_2",  "name": "Қорақалпоғистон Республикаси филиали"},
+    {"id": "fb_3",  "name": "Андижон вилояти филиали"},
+    {"id": "fb_4",  "name": "Бухоро вилояти филиали"},
+    {"id": "fb_5",  "name": "Жиззах вилояти филиали"},
+    {"id": "fb_6",  "name": "Қашқадарё вилояти филиали"},
+    {"id": "fb_7",  "name": "Навоий вилояти филиали"},
+    {"id": "fb_8",  "name": "Наманган вилояти филиали"},
+    {"id": "fb_9",  "name": "Самарқанд вилояти филиали"},
+    {"id": "fb_10", "name": "Сурхондарё вилояти филиали"},
+    {"id": "fb_11", "name": "Сирдарё вилояти филиали"},
+    {"id": "fb_12", "name": "Фарғона вилояти филиали"},
+    {"id": "fb_13", "name": "Тошкент вилояти филиали"},
+    {"id": "fb_14", "name": "Хоразм вилояти филиали"},
+    {"id": "fb_15", "name": "Тошкент шаҳар филиали"},
+]
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -28,28 +45,33 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     try:
         status = await bot_api.get_employee_status(user_id)
-
-        if status.get("registration_state") == "REGISTERED":
+        if isinstance(status, dict) and status.get("registration_state") == "REGISTERED":
+            # Employee is already registered in DB — show main menu directly
             await update.message.reply_text(
                 messages.WELCOME_BACK,
                 reply_markup=get_main_menu_keyboard(),
             )
             return MAIN_MENU
-
     except Exception as e:
-        logger.warning("Could not get employee status for user %d: %s", user_id, e)
+        logger.warning("Error fetching employee status for %d: %s", user_id, e)
 
-    # New user — show welcome + branch keyboard
+    # New or unregistered user — fetch branches
+    branches = []
     try:
         resp = await bot_api.get_branches()
-        branches = resp.get("branches", [])
+        if isinstance(resp, dict):
+            branches = resp.get("branches", [])
+        elif isinstance(resp, list):
+            branches = resp
     except Exception as e:
-        logger.error("Could not fetch branches: %s", e)
-        branches = []
+        logger.error("Error fetching branches: %s", e)
+
+    if not branches:
+        branches = FALLBACK_BRANCHES
 
     await update.message.reply_text(
         messages.WELCOME_NEW,
-        reply_markup=get_branch_keyboard(branches) if branches else None,
+        reply_markup=get_branch_keyboard(branches),
     )
     return ASK_BRANCH
 
