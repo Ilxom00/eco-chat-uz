@@ -77,7 +77,7 @@ async def register_employee(
         emp.registration_state = "REGISTERED"
         emp.registered_at = datetime.now(timezone.utc)
     else:
-        new_id = str(uuid.uuid4())  # Always string — works for both SQLite and PostgreSQL
+        new_id = str(uuid.uuid4())  # String — works for both SQLite and PostgreSQL
         emp = Employee(
             id=new_id,
             telegram_user_id=tg_id,
