@@ -2,6 +2,7 @@ const Questions = {
     currentTopicId: null,
     currentTopicName: '',
     currentPage: 1,
+    questionsMap: {},
 
     loadForTopic(topicId, topicName) {
         this.currentTopicId = topicId;
@@ -11,8 +12,6 @@ const Questions = {
         document.getElementById('pageTitle').textContent = `Саволлар: ${topicName}`;
         const topicsSection = document.getElementById('topics');
         if (!topicsSection) return;
-        
-        const safeName = (topicName || '').replace(/'/g, "\\'");
 
         topicsSection.innerHTML = `
             <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
@@ -36,7 +35,7 @@ const Questions = {
                             <th style="padding:12px;width:50px;text-align:center;font-size:12px;font-weight:700;color:#6b7280;">№</th>
                             <th style="padding:12px;text-align:left;font-size:12px;font-weight:700;color:#6b7280;">САВОЛ МАТНИ</th>
                             <th style="padding:12px;text-align:left;font-size:12px;font-weight:700;color:#166534;">ТЎҒРИ ЖАВОБ</th>
-                            <th style="padding:12px;width:120px;text-align:center;font-size:12px;font-weight:700;color:#6b7280;">АМАЛЛАР</th>
+                            <th style="padding:12px;width:180px;text-align:center;font-size:12px;font-weight:700;color:#6b7280;">АМАЛЛАР</th>
                         </tr>
                     </thead>
                     <tbody id="questionsList">
@@ -76,6 +75,11 @@ const Questions = {
             const items = res.items || [];
             const total = res.total || 0;
 
+            this.questionsMap = {};
+            items.forEach(q => {
+                this.questionsMap[q.id] = q;
+            });
+
             if (items.length === 0) {
                 tbody.innerHTML = `
                     <tr>
@@ -100,10 +104,16 @@ const Questions = {
                             <span style="background:#dcfce7;padding:4px 10px;border-radius:16px;">✅ ${q.correct_answer}</span>
                         </td>
                         <td style="padding:12px;text-align:center;">
-                            <button onclick="Questions.confirmDeleteQuestion('${q.id}', '${safeText}')"
-                                style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 6px rgba(220,38,38,0.2);">
-                                🗑️ Ўчириш
-                            </button>
+                            <div style="display:inline-flex;gap:8px;">
+                                <button onclick="Questions.showEditModal('${q.id}')"
+                                    style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 6px rgba(37,99,235,0.2);">
+                                    ✏️ Таҳрирлаш
+                                </button>
+                                <button onclick="Questions.confirmDeleteQuestion('${q.id}', '${safeText}')"
+                                    style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 6px rgba(220,38,38,0.2);">
+                                    🗑️ Ўчириш
+                                </button>
+                            </div>
                         </td>
                     </tr>`;
             }).join('');
@@ -204,6 +214,93 @@ const Questions = {
 
         } catch (e) {
             if (btn) { btn.textContent = '💾 Сақлаш'; btn.disabled = false; }
+            alert('Хатолик: ' + (e.message || e));
+        }
+    },
+
+    showEditModal(qId) {
+        const q = this.questionsMap[qId];
+        if (!q) return;
+
+        document.getElementById('editQuestionModal')?.remove();
+
+        const options = q.options || ['', '', '', ''];
+        const correctText = q.correct_answer || '';
+        let correctIdx = 0;
+
+        options.forEach((opt, idx) => {
+            if (opt === correctText) correctIdx = idx;
+        });
+
+        const modal = document.createElement('div');
+        modal.id = 'editQuestionModal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.65);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;';
+        modal.innerHTML = `
+            <div style="background:#fff;border-radius:20px;padding:32px;max-width:560px;width:92%;box-shadow:0 24px 64px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto;">
+                <h2 style="margin:0 0 20px 0;color:#111827;font-size:20px;display:flex;align-items:center;gap:8px;">
+                    <span>✏️</span> <span>Саволни таҳрирлаш</span>
+                </h2>
+
+                <div style="margin-bottom:20px;">
+                    <label style="display:block;margin-bottom:6px;font-weight:700;font-size:13px;color:#374151;">Савол матни:</label>
+                    <textarea id="editQuestionText" rows="3" style="width:100%;padding:12px;border-radius:10px;border:2px solid #e5e7eb;font-size:14px;box-sizing:border-box;font-family:inherit;resize:vertical;">${q.text || ''}</textarea>
+                </div>
+
+                <div style="font-weight:700;font-size:13px;color:#374151;margin-bottom:10px;">4 та вариант (тўғри жавобни танланг):</div>
+
+                ${['A', 'B', 'C', 'D'].map((label, idx) => `
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;background:#f9fafb;padding:10px 14px;border-radius:10px;border:1px solid #e5e7eb;">
+                        <input type="radio" name="editCorrectAnswerRadio" id="edit_radio_${label}" value="${idx}" ${idx === correctIdx ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;accent-color:#166534;">
+                        <label for="edit_radio_${label}" style="font-weight:800;font-size:14px;color:#166534;width:24px;">${label}:</label>
+                        <input type="text" id="edit_ans_input_${idx}" value="${(options[idx] || '').replace(/"/g, '&quot;')}" placeholder="${label} вариант жавоби" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;">
+                    </div>
+                `).join('')}
+
+                <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;">
+                    <button onclick="document.getElementById('editQuestionModal').remove()" style="padding:10px 22px;border-radius:10px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;font-size:14px;font-weight:600;color:#374151;">Бекор қилиш</button>
+                    <button id="updateQuestionBtn" onclick="Questions.submitEditQuestion('${qId}')" style="padding:10px 24px;border-radius:10px;border:none;background:#2563eb;color:#fff;cursor:pointer;font-size:14px;font-weight:700;">💾 Ўзгаришларни сақлаш</button>
+                </div>
+            </div>`;
+
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        document.getElementById('editQuestionText').focus();
+    },
+
+    async submitEditQuestion(qId) {
+        const text = document.getElementById('editQuestionText').value.trim();
+        if (!text) { alert('Илтимос, савол матнини киритинг!'); return; }
+
+        const answers = [];
+        const selectedCorrectIdx = parseInt(document.querySelector('input[name="editCorrectAnswerRadio"]:checked').value, 10);
+
+        for (let i = 0; i < 4; i++) {
+            const val = document.getElementById(`edit_ans_input_${i}`).value.trim();
+            if (!val) { alert(`Илтимос, барча 4 та вариантни тўлдиринг (${['A','B','C','D'][i]} вариант бўш)!`); return; }
+            answers.push({
+                text: val,
+                is_correct: (i === selectedCorrectIdx),
+                option_label: ['A', 'B', 'C', 'D'][i]
+            });
+        }
+
+        const btn = document.getElementById('updateQuestionBtn');
+        if (btn) { btn.textContent = 'Сақланмоқда...'; btn.disabled = true; }
+
+        try {
+            await API.updateQuestion(qId, { text, answers });
+            document.getElementById('editQuestionModal')?.remove();
+            
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;padding:14px 20px;border-radius:12px;font-weight:700;background:#16a34a;color:#fff;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,0.2);';
+            toast.textContent = '✅ Савол муваффақиятли таҳрирланди!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+
+            this.fetchQuestions(this.currentTopicId, this.currentPage);
+
+        } catch (e) {
+            if (btn) { btn.textContent = '💾 Ўзгаришларни сақлаш'; btn.disabled = false; }
             alert('Хатолик: ' + (e.message || e));
         }
     },
