@@ -6,13 +6,23 @@ const Topics = {
     async loadTopics() {
         const container = document.getElementById('topicsList');
         if (!container) return;
-        container.innerHTML = '<div style="padding:20px;color:var(--text-secondary)">Юкланмоқда...</div>';
+        container.innerHTML = '<div style="padding:24px;color:#6b7280;font-weight:600;">Юкланмоқда...</div>';
 
         try {
-            const topics = await API.getTopics();
+            let topics = await API.getTopics();
+
+            // Auto force-reseed if DB is missing topics or has fewer than 4 topics
+            if (!topics || !Array.isArray(topics) || topics.length < 4) {
+                try {
+                    await API.fetch('/topics/reseed', { method: 'POST' });
+                    topics = await API.getTopics();
+                } catch (reseedErr) {
+                    console.error('Reseed error:', reseedErr);
+                }
+            }
 
             if (!topics || topics.length === 0) {
-                container.innerHTML = '<div style="padding:20px;color:var(--text-secondary)">Мавзулар йўқ. Янги мавзу қўшинг.</div>';
+                container.innerHTML = '<div style="padding:24px;color:#9ca3af;font-weight:600;">Мавзулар топилмади. "+ Янги мавзу" тугмасини босинг.</div>';
                 return;
             }
 
@@ -218,13 +228,11 @@ const Topics = {
 document.addEventListener('DOMContentLoaded', () => {
     Topics.init();
 
-    // Listen to nav button clicks
     const btn = document.querySelector('[data-target="topics"]');
     if (btn) {
         btn.addEventListener('click', () => Topics.init());
     }
 
-    // Listen to hash changes
     window.addEventListener('hashchange', () => {
         if (window.location.hash === '#topics') {
             Topics.init();
