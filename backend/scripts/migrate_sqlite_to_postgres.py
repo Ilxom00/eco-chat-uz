@@ -2,6 +2,7 @@ import asyncio
 import os
 import sys
 import json
+from datetime import datetime
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
@@ -87,11 +88,19 @@ async def migrate():
                 for row in rows:
                     row_dict = dict(zip(keys, row))
                     
-                    # Convert SQLite integers representing booleans to strict Python booleans for postgres
+                    # Convert SQLite integers representing booleans and string timestamps
                     for k, v in row_dict.items():
                         if k == "is_active" or k.startswith("is_"):
                             if v is not None:
                                 row_dict[k] = bool(v)
+                        elif isinstance(v, str) and (k.endswith("_at") or k in ["last_login", "started_at", "completed_at"]):
+                            try:
+                                if "." in v:
+                                    row_dict[k] = datetime.strptime(v, "%Y-%m-%d %H:%M:%S.%f")
+                                else:
+                                    row_dict[k] = datetime.strptime(v, "%Y-%m-%d %H:%M:%S")
+                            except Exception:
+                                pass
                     
                     col_names = ", ".join(row_dict.keys())
                     val_placeholders = ", ".join([f":{k}" for k in row_dict.keys()])
