@@ -60,8 +60,11 @@ echo "📥 [3/6] Yangi kod yuklanmoqda..."
 git pull origin main
 echo "✅ Kod yangilandi"
 
-# ── 4. Backup before deploy ───────────────────────────────────────────
-echo "💾 [4/6] Deploy oldidan backup..."
+# ── 4. Pre-deploy manifest & Backup before deploy ────────────────────
+echo "💾 [4/6] Deploy oldidan baseline & backup..."
+BEFORE_COUNTS=$(curl -s "http://localhost/api/system-forensic-manifest?secret=eco2026" || echo "Unavailable")
+echo "📊 BEFORE COUNTS: $BEFORE_COUNTS"
+
 BACKUP="$DATA_DIR/backups/pre_deploy_$(date +%Y%m%d_%H%M%S).sql"
 if docker-compose ps postgres 2>/dev/null | grep -q "Up"; then
     docker-compose exec -T postgres pg_dump -U ecochat ecochat_db > "$BACKUP" 2>/dev/null && \
@@ -87,7 +90,9 @@ docker-compose up -d postgres redis
 
 # ── 6. Verify ─────────────────────────────────────────────────────────
 echo "🔍 [6/6] Tekshirilmoqda..."
-sleep 8
+sleep 10
+AFTER_COUNTS=$(curl -s "http://localhost/api/system-forensic-manifest?secret=eco2026" || echo "Unavailable")
+echo "📊 AFTER COUNTS: $AFTER_COUNTS"
 
 BACKEND_OK=false
 for i in 1 2 3; do
