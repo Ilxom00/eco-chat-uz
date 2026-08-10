@@ -9,17 +9,6 @@ from app.models.branch import Branch
 logger = logging.getLogger(__name__)
 
 
-def _force_uuid(val) -> Optional[uuid.UUID]:
-    if not val:
-        return None
-    if isinstance(val, uuid.UUID):
-        return val
-    try:
-        return uuid.UUID(str(val).strip())
-    except (ValueError, TypeError):
-        return None
-
-
 async def get_all_branches(db: AsyncSession, include_archived: bool = False) -> list[Branch]:
     query = select(Branch).order_by(Branch.sort_order)
     if not include_archived:
@@ -42,64 +31,82 @@ async def create_branch(db: AsyncSession, name: str, sort_order: int = None) -> 
 
 
 async def resolve_branch_id(
-    db: AsyncSession, 
-    branch_id: Optional[str | uuid.UUID] = None, 
+    db: AsyncSession,
+    branch_id: Optional[str | uuid.UUID] = None,
     branch_name: Optional[str] = None
 ) -> Optional[uuid.UUID]:
-    """Safely resolve valid uuid.UUID for branch from either branch_id or branch_name."""
-    try:
-        bid_str = str(branch_id).strip() if branch_id else None
-        bname_str = branch_name.strip() if branch_name else None
+    """
+    Safely resolve branch UUID using ORM queries only.
+    NEVER uses raw text() queries with string UUID params to avoid asyncpg type errors.
+    """
+    bid_str = str(branch_id).strip() if branch_id else None
 
-        # 1. Try exact UUID match
-        if isinstance(branch_id, uuid.UUID):
-            return branch_id
+    # 1. If already a uuid.UUID, return directly
+    if isinstance(branch_id, uuid.UUID):
+        return branch_id
 
-        # 2. Try direct query by string id
-        if bid_str:
-            res = await db.execute(text("SELECT id FROM branches WHERE id = :bid"), {"bid": bid_str})
-            row = res.fetchone()
-            if row:
-                return _force_uuid(row[0])
+    # 2. Try parsing string as UUID and look up via ORM
+    if bid_str:
+        try:
+            bid_uuid = uuid.UUID(bid_str)
+            result = await db.execute(select(Branch).filter(Branch.id == bid_uuid))
+            branch = result.scalar_one_or_none()
+            if branch:
+                return branch.id
+        except (ValueError, TypeError):
+            pass  # Not a valid UUID string, try other methods
 
-        # 3. Try fallback numeric index lookup (e.g. fb_1 -> 1)
-        if bid_str and "fb_" in bid_str:
-            try:
-                sort_num = int(bid_str.split("fb_")[1])
-                res_so = await db.execute(text("SELECT id FROM branches WHERE sort_order = :so"), {"so": sort_num})
-                row_so = res_so.fetchone()
-                if row_so:
-                    return _force_uuid(row_so[0])
-            except Exception:
-                pass
-
-        # 4. Try exact or fuzzy name match
-        query_name = bname_str or bid_str
-        if query_name:
-            res_name = await db.execute(
-                text("SELECT id FROM branches WHERE name = :n OR LOWER(name) LIKE LOWER(:ln)"),
-                {"n": query_name, "ln": f"%{query_name}%"}
+    # 3. Try fb_X fallback index pattern (fb_1 = sort_order 1)
+    if bid_str and "fb_" in bid_str:
+        try:
+            sort_num = int(bid_str.split("fb_")[1])
+            result = await db.execute(
+                select(Branch).filter(Branch.sort_order == sort_num, Branch.is_active == True)
             )
-            row_name = res_name.fetchone()
-            if row_name:
-                return _force_uuid(row_name[0])
+            branch = result.scalar_one_or_none()
+            if branch:
+                return branch.id
+        except (ValueError, IndexError):
+            pass
 
-        # 5. Fallback to first available branch
-        res_first = await db.execute(text("SELECT id FROM branches ORDER BY sort_order ASC LIMIT 1"))
-        row_first = res_first.fetchone()
-        if row_first:
-            return _force_uuid(row_first[0])
+    # 4. Try exact name match via ORM
+    query_name = branch_name or bid_str
+    if query_name:
+        # Exact match first
+        result = await db.execute(select(Branch).filter(Branch.name == query_name))
+        branch = result.scalar_one_or_none()
+        if branch:
+            return branch.id
 
-        return None
-    except Exception as e:
-        logger.error("Error resolving branch_id: %s", e)
+        # Fuzzy/case-insensitive match
+        result = await db.execute(select(Branch).filter(Branch.name.ilike(f"%{query_name}%")))
+        branch = result.scalars().first()
+        if branch:
+            return branch.id
+
+    # 5. Fallback: first active branch via ORM
+    result = await db.execute(
+        select(Branch).filter(Branch.is_active == True).order_by(Branch.sort_order).limit(1)
+    )
+    branch = result.scalar_one_or_none()
+    if branch:
+        return branch.id
+
+    return None
+
+
+async def get_branch_by_id(db: AsyncSession, branch_id: str) -> Optional[Branch]:
+    """Get branch by ID string. Safely converts to UUID for asyncpg compatibility."""
+    try:
+        bid_uuid = uuid.UUID(str(branch_id).strip())
+        result = await db.execute(select(Branch).filter(Branch.id == bid_uuid))
+        return result.scalar_one_or_none()
+    except (ValueError, TypeError):
         return None
 
 
 async def archive_branch(db: AsyncSession, branch_id: str) -> Branch:
-    bid = str(branch_id).strip()
-    result = await db.execute(select(Branch).filter(Branch.id == bid))
-    branch = result.scalar_one_or_none()
+    branch = await get_branch_by_id(db, branch_id)
     if branch:
         branch.is_active = False
         await db.commit()
@@ -120,14 +127,15 @@ async def reorder_branch(db: AsyncSession, branch_id: str, direction: str) -> li
 
 
 async def delete_branch(db: AsyncSession, branch_id: str) -> bool:
-    """Filialni o'chiradi. Bog'liq xodimlarning branch_id ni NULL qiladi."""
+    """Delete branch and unlink employees."""
     try:
-        bid = str(branch_id).strip()
+        bid_uuid = uuid.UUID(str(branch_id).strip())
+        # Unlink employees via ORM-safe raw SQL with proper UUID
         await db.execute(
             text("UPDATE employees SET branch_id = NULL WHERE branch_id = :bid"),
-            {"bid": bid}
+            {"bid": bid_uuid}
         )
-        await db.execute(text("DELETE FROM branches WHERE id = :bid"), {"bid": bid})
+        await db.execute(text("DELETE FROM branches WHERE id = :bid"), {"bid": bid_uuid})
         await db.commit()
         return True
     except Exception as e:
@@ -136,9 +144,12 @@ async def delete_branch(db: AsyncSession, branch_id: str) -> bool:
 
 
 async def get_employee_count_in_branch(db: AsyncSession, branch_id: str) -> int:
-    bid = str(branch_id).strip()
-    result = await db.execute(
-        text("SELECT COUNT(*) FROM employees WHERE branch_id = :bid"),
-        {"bid": bid}
-    )
-    return result.scalar() or 0
+    try:
+        bid_uuid = uuid.UUID(str(branch_id).strip())
+        result = await db.execute(
+            text("SELECT COUNT(*) FROM employees WHERE branch_id = :bid"),
+            {"bid": bid_uuid}
+        )
+        return result.scalar() or 0
+    except (ValueError, TypeError):
+        return 0
