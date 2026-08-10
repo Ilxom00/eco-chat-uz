@@ -222,7 +222,68 @@ app.include_router(sse.router, prefix="/api/sse", tags=["SSE"])
 app.include_router(internal_bot.router, prefix="/internal/bot", tags=["Internal Bot API"])
 
 
-# в”Ђв”Ђ Health Endpoint в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+# ── Debug Endpoint (REMOVE IN PRODUCTION) ────────────────────────────────────
+@app.get("/api/debug/test-flow", tags=["Debug"])
+async def debug_test_flow(tg_id: int = 999999999):
+    """Debug: test employee registration + attempt start to expose exact errors."""
+    import traceback
+    results = {}
+    
+    try:
+        from app.database import AsyncSessionLocal
+        from app.services import employee_service, topic_service, test_engine
+        
+        # Step 1: Test employee creation
+        try:
+            async with AsyncSessionLocal() as db:
+                emp = await employee_service.register_employee(
+                    db=db, telegram_user_id=tg_id,
+                    full_name="Test Debug User",
+                    branch_name_or_id=None, phone=""
+                )
+                results["step1_register"] = {"ok": True, "employee_id": str(emp.id), "branch_id": str(emp.branch_id)}
+        except Exception as e:
+            results["step1_register"] = {"ok": False, "error": str(e), "trace": traceback.format_exc()[-500:]}
+            return results
+        
+        # Step 2: Get topics
+        try:
+            async with AsyncSessionLocal() as db:
+                topics = await topic_service.get_active_topics_ordered(db)
+                results["step2_topics"] = {"ok": True, "count": len(topics), "first_id": str(topics[0].id) if topics else None}
+        except Exception as e:
+            results["step2_topics"] = {"ok": False, "error": str(e)}
+            return results
+        
+        # Step 3: Test attempt start
+        if topics:
+            topic_id = str(topics[0].id)
+            emp_id = results["step1_register"]["employee_id"]
+            try:
+                async with AsyncSessionLocal() as db:
+                    attempt = await test_engine.start_attempt(db, None, emp_id, topic_id, 1)
+                    results["step3_attempt"] = {"ok": True, "attempt_id": str(attempt.id)}
+            except Exception as e:
+                results["step3_attempt"] = {"ok": False, "error": str(e), "trace": traceback.format_exc()[-800:]}
+        
+        # Step 4: Count employees in DB
+        try:
+            async with AsyncSessionLocal() as db:
+                from sqlalchemy import func
+                from sqlalchemy.future import select
+                from app.models.employee import Employee
+                count = (await db.execute(select(func.count()).select_from(Employee))).scalar()
+                results["step4_count"] = {"ok": True, "total_employees": count}
+        except Exception as e:
+            results["step4_count"] = {"ok": False, "error": str(e)}
+            
+    except Exception as e:
+        results["fatal"] = str(e)
+    
+    return results
+
+
+# ── Health Endpoint ─────────────────────────────────────────────────────────
 @app.get("/health", tags=["System"])
 async def health_check():
     """Health check endpoint for load balancer / monitoring."""
