@@ -36,7 +36,7 @@ logger.add(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup: create tables, connect services, start bot. Shutdown: cleanup."""
-    logger.info("рџЊ± eco-chat.uz starting up...")
+    logger.info("🌿 eco-chat.uz starting up...")
 
     # Create all DB tables (idempotent)
     try:
@@ -45,6 +45,35 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Database tables ready")
     except Exception as e:
         logger.error("❌ Database init failed: {}", e)
+
+    # Auto-backup employee data on every startup (protects against accidental data loss)
+    try:
+        import subprocess, os
+        from sqlalchemy import text as _text2
+        async with engine.begin() as conn:
+            emp_count = (await conn.execute(_text2("SELECT COUNT(*) FROM employees"))).scalar() or 0
+        if emp_count > 0:
+            backup_dir = os.environ.get("BACKUP_DIR", "/backups")
+            os.makedirs(backup_dir, exist_ok=True)
+            from datetime import datetime
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_file = f"{backup_dir}/startup_backup_{ts}_emp{emp_count}.sql"
+            db_url = os.environ.get("DATABASE_URL_SYNC", "")
+            if db_url and "postgresql" in db_url:
+                result = subprocess.run(
+                    ["pg_dump", db_url, "-f", backup_file, "--no-password"],
+                    capture_output=True, timeout=30
+                )
+                if result.returncode == 0:
+                    logger.info("✅ Startup backup: {} ({} employees)", backup_file, emp_count)
+                else:
+                    logger.warning("⚠️ Startup backup failed: {}", result.stderr.decode())
+            else:
+                logger.info("✅ {} employees in DB (SQLite — no pg_dump needed)", emp_count)
+        else:
+            logger.info("ℹ️ No employees yet — backup skipped")
+    except Exception as e:
+        logger.warning("⚠️ Startup backup error (non-critical): {}", e)
 
     # Create or update superadmin accounts (user / admin -> 12345)
     try:
