@@ -81,13 +81,17 @@ async def get_or_create_assignment(
     Uses SELECT FOR UPDATE to prevent race conditions.
     This is TRANSACTIONAL — all 15 questions or none.
     """
+    # Always use str() for UUID comparisons — works for both SQLite and PostgreSQL
+    eid = str(employee_id)
+    tid = str(topic_id)
+
     # SELECT FOR UPDATE prevents duplicate assignments
     result = await db.execute(
         select(EmployeeTopicAssignment)
         .where(
             and_(
-                EmployeeTopicAssignment.employee_id == employee_id,
-                EmployeeTopicAssignment.topic_id == topic_id,
+                EmployeeTopicAssignment.employee_id == eid,
+                EmployeeTopicAssignment.topic_id == tid,
             )
         )
         .with_for_update()
@@ -99,8 +103,8 @@ async def get_or_create_assignment(
 
     # Create new assignment
     assignment = EmployeeTopicAssignment(
-        employee_id=employee_id,
-        topic_id=topic_id,
+        employee_id=eid,
+        topic_id=tid,
         status="ASSIGNED",
     )
     db.add(assignment)
@@ -111,7 +115,7 @@ async def get_or_create_assignment(
         select(Question)
         .where(
             and_(
-                Question.topic_id == topic_id,
+                Question.topic_id == tid,
                 Question.status == "ACTIVE",
             )
         )
