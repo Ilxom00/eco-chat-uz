@@ -26,18 +26,54 @@ async def get_dashboard_stats(db: AsyncSession) -> dict:
         total_tests = (await db.execute(
             select(func.count()).select_from(EmployeeTopicAssignment).where(EmployeeTopicAssignment.status == "COMPLETED")
         )).scalar() or 0
+
+        # Per-topic averages
+        topic_stats_raw = await db.execute(text("""
+            SELECT
+                t.sequence_order,
+                t.short_name,
+                ROUND(AVG(CASE WHEN ta.attempt_number = 1 AND ta.status = 'COMPLETED' THEN ta.score END), 1) as avg1,
+                ROUND(AVG(CASE WHEN ta.attempt_number = 2 AND ta.status = 'COMPLETED' THEN ta.score END), 1) as avg2
+            FROM topics t
+            LEFT JOIN test_attempts ta ON ta.topic_id = t.id
+            WHERE t.is_active = true
+            GROUP BY t.id, t.sequence_order, t.short_name
+            ORDER BY t.sequence_order
+        """))
+        topic_stats = []
+        for row in topic_stats_raw.fetchall():
+            a1 = float(row[2]) if row[2] is not None else None
+            a2 = float(row[3]) if row[3] is not None else None
+            diff = round(a2 - a1, 1) if (a1 is not None and a2 is not None) else None
+            topic_stats.append({
+                "seq": row[0],
+                "name": row[1],
+                "avg1": a1,
+                "avg2": a2,
+                "diff": diff,
+            })
+
+        # Overall averages
+        all_avg1 = [t["avg1"] for t in topic_stats if t["avg1"] is not None]
+        all_avg2 = [t["avg2"] for t in topic_stats if t["avg2"] is not None]
+        overall_avg1 = round(sum(all_avg1) / len(all_avg1), 1) if all_avg1 else None
+        overall_avg2 = round(sum(all_avg2) / len(all_avg2), 1) if all_avg2 else None
+        overall_diff = round(overall_avg2 - overall_avg1, 1) if (overall_avg1 is not None and overall_avg2 is not None) else None
+
         return {
             "totalEmployees": total_employees,
             "started": started,
             "completed": completed,
             "active": active,
-            "avg1": 0,
-            "avg2": 0,
-            "growth": 0,
             "totalTests": total_tests,
+            "topicStats": topic_stats,
+            "overallAvg1": overall_avg1,
+            "overallAvg2": overall_avg2,
+            "overallDiff": overall_diff,
         }
-    except Exception:
-        return {"totalEmployees": 0, "started": 0, "completed": 0, "active": 0, "avg1": 0, "avg2": 0, "growth": 0, "totalTests": 0}
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return {"totalEmployees": 0, "started": 0, "completed": 0, "active": 0, "totalTests": 0, "topicStats": [], "overallAvg1": None, "overallAvg2": None, "overallDiff": None}
 
 
 async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: int, page_size: int) -> tuple[list, int]:
