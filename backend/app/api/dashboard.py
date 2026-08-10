@@ -20,8 +20,17 @@ async def get_dashboard_employee_detail(id: str, db: AsyncSession = Depends(get_
     return await result_service.get_employee_detail_for_report(db, id)
 
 @router.get("/attempts/{attempt_id}/detail")
-async def get_dashboard_attempt_detail(attempt_id: str, db: AsyncSession = Depends(get_db)):
-    return await result_service.get_attempt_detail_for_dashboard(db, attempt_id)
+async def get_dashboard_attempt_detail(
+    attempt_id: str, 
+    emp_id: str = None, 
+    topic_id: str = None, 
+    attempt_num: int = 1, 
+    db: AsyncSession = Depends(get_db)
+):
+    return await result_service.get_attempt_detail_for_dashboard(
+        db, attempt_id, emp_id=emp_id, topic_id=topic_id, attempt_num=attempt_num
+    )
+
 
 @router.api_route("/system-update", methods=["GET", "POST"])
 async def trigger_system_update():
