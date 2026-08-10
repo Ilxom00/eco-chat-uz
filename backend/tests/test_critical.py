@@ -141,7 +141,8 @@ class TestSameQuestionsRule:
         assigned_ids = set(str(q.id) for q in assigned)
 
         # Simulate attempt2 trying to add a new question (bug scenario)
-        extra_q = sample_questions[50]  # Not in assigned
+        available = [q for q in sample_questions if str(q.id) not in assigned_ids]
+        extra_q = available[0]
         attempt2_bad = assigned + [extra_q]
 
         bad_ids = set(str(q.id) for q in attempt2_bad)
