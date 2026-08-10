@@ -291,8 +291,88 @@ async def get_attempt_detail_for_dashboard(
             att = attempt_res.fetchone()
 
         if not att:
-            logger.warning("Attempt not found for id=%s emp=%s topic=%s att=%s", attempt_id, emp_id, topic_id, attempt_num)
-            return {}
+            logger.warning("Attempt not found for id=%s emp=%s topic=%s att=%s — fallback to topic questions", attempt_id, emp_id, topic_id, attempt_num)
+            # Fallback 3: Query employee, topic, and active questions directly
+            emp_info = None
+            if emp_id:
+                e_res = await db.execute(text("""
+                    SELECT e.full_name, COALESCE(b.name, '—')
+                    FROM employees e
+                    LEFT JOIN branches b ON CAST(e.branch_id AS text) = CAST(b.id AS text)
+                    WHERE CAST(e.id AS text) = :eid
+                """), {"eid": str(emp_id).strip()})
+                emp_info = e_res.fetchone()
+
+            topic_info = None
+            if topic_id:
+                t_res = await db.execute(text("""
+                    SELECT short_name, full_name
+                    FROM topics
+                    WHERE CAST(id AS text) = :tid
+                """), {"tid": str(topic_id).strip()})
+                topic_info = t_res.fetchone()
+
+            emp_name = emp_info[0] if emp_info else "Ходим"
+            branch_name = emp_info[1] if emp_info else "—"
+            top_short = topic_info[0] if topic_info else "Мавзу"
+            top_full = topic_info[1] if topic_info else "Мавзу саволлари"
+
+            fallback_questions = []
+            if topic_id:
+                f_qs = await db.execute(text("""
+                    SELECT q.id, q.text
+                    FROM questions q
+                    WHERE CAST(q.topic_id AS text) = :tid AND q.is_active = true
+                    ORDER BY q.created_at ASC
+                    LIMIT 15
+                """), {"tid": str(topic_id).strip()})
+                f_rows = f_qs.fetchall()
+
+                for f_idx, f_row in enumerate(f_rows, start=1):
+                    q_id = str(f_row[0])
+                    q_txt = f_row[1]
+
+                    ans_rows = await db.execute(text("""
+                        SELECT id, option_label, text, is_correct
+                        FROM question_answers
+                        WHERE CAST(question_id AS text) = :qid
+                        ORDER BY sort_order ASC
+                    """), {"qid": q_id})
+                    answers = ans_rows.fetchall()
+
+                    labels = ['А', 'Б', 'В', 'Г']
+                    options = []
+                    for idx, a in enumerate(answers):
+                        options.append({
+                            "id": str(a[0]),
+                            "label": a[1] or (labels[idx] if idx < len(labels) else str(idx+1)),
+                            "text": a[2],
+                            "is_selected": False,
+                            "is_correct": bool(a[3]),
+                        })
+
+                    fallback_questions.append({
+                        "display_order": f_idx,
+                        "question_text": q_txt,
+                        "answer_status": "COMPLETED",
+                        "is_correct": None,
+                        "response_time_sec": 0,
+                        "options": options,
+                    })
+
+            return {
+                "attempt_id": "none",
+                "employee_name": emp_name,
+                "branch_name": branch_name,
+                "topic_name": f"{top_short} — {top_full}",
+                "attempt_number": int(attempt_num or 1),
+                "score": 0,
+                "percentage": 0,
+                "status": "NOT_STARTED",
+                "duration": "—",
+                "questions": fallback_questions,
+            }
+
 
         real_attempt_id = str(att[0])
         asgn_id = str(att[8]) if att[8] else None
