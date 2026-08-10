@@ -1,9 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func
+from sqlalchemy import func, text
 from app.models.employee import Employee
 from datetime import datetime
 import pytz
+
 
 async def get_or_create_employee(db: AsyncSession, telegram_user_id: int) -> tuple[Employee, bool]:
     result = await db.execute(select(Employee).filter(Employee.telegram_user_id == telegram_user_id))
@@ -51,3 +52,43 @@ async def list_employees(db: AsyncSession, filters: dict, page: int, page_size: 
     query = query.offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     return result.scalars().all(), total_count
+
+async def delete_employee_cascade(db: AsyncSession, employee_id: str) -> bool:
+    """Xodimni va unga tegishli barcha ma'lumotlarni to'liq o'chiradi."""
+    try:
+        eid = employee_id
+        # 1. attempt_questions → test_attempts (this employee)
+        await db.execute(text("""
+            DELETE FROM attempt_questions WHERE attempt_id IN (
+                SELECT id FROM test_attempts WHERE employee_id = :eid
+            )
+        """), {"eid": eid})
+
+        # 2. employee_topic_questions → employee_topic_assignments (this employee)
+        await db.execute(text("""
+            DELETE FROM employee_topic_questions WHERE assignment_id IN (
+                SELECT id FROM employee_topic_assignments WHERE employee_id = :eid
+            )
+        """), {"eid": eid})
+
+        # 3. Null out circular FKs in employee_topic_assignments
+        await db.execute(text("""
+            UPDATE employee_topic_assignments
+            SET attempt1_id = NULL, attempt2_id = NULL
+            WHERE employee_id = :eid
+        """), {"eid": eid})
+
+        # 4. Delete test_attempts
+        await db.execute(text("DELETE FROM test_attempts WHERE employee_id = :eid"), {"eid": eid})
+
+        # 5. Delete employee_topic_assignments
+        await db.execute(text("DELETE FROM employee_topic_assignments WHERE employee_id = :eid"), {"eid": eid})
+
+        # 6. Delete employee
+        await db.execute(text("DELETE FROM employees WHERE id = :eid"), {"eid": eid})
+
+        await db.commit()
+        return True
+    except Exception as e:
+        await db.rollback()
+        raise e
