@@ -18,6 +18,10 @@ const Dashboard = {
         if (searchInput) {
             searchInput.addEventListener('input', this.debounce(() => this.loadEmployees(1), 400));
         }
+        const filterTopicEl = document.getElementById('filterTopic');
+        const filterStatusEl = document.getElementById('filterStatus');
+        if (filterTopicEl) filterTopicEl.addEventListener('change', () => this.loadEmployees(1));
+        if (filterStatusEl) filterStatusEl.addEventListener('change', () => this.loadEmployees(1));
 
         // Smart auto-refresh every 10 seconds
         setInterval(() => {
@@ -146,21 +150,24 @@ const Dashboard = {
     async loadEmployees(page = 1) {
         this.currentPage = page;
         try {
-            const search = (document.getElementById('empSearch')?.value || '').trim();
-            const data = await API.getDashboardEmployees({ page, search });
+            const search = (document.getElementById('empSearch')?.value || '').trim().toLowerCase();
+            const filterTopic = document.getElementById('filterTopic')?.value || 'all';
+            const filterStatus = document.getElementById('filterStatus')?.value || 'all';
+
+            // Fetch all items (up to 1000) to allow clean multi-criteria filtering client-side
+            const data = await API.getDashboardEmployees({ page: 1, page_size: 1000 });
             const thead = document.getElementById('ratingTableHead');
             const tbody = document.getElementById('employeesTableBody');
 
             if (!data || !data.items || data.items.length === 0) {
                 this.employeesMap = {};
-                const tc = 4; // fallback topic count for empty state
+                const tc = 4;
                 const colspan = 3 + tc * 4 + 3;
                 if (thead) thead.innerHTML = this.buildHeader(tc);
                 if (tbody) tbody.innerHTML = `
                     <tr><td colspan="${colspan}" style="text-align:center;padding:48px;color:#9ca3af;">
                         <div style="font-size:40px;margin-bottom:12px;">📋</div>
                         <div style="font-size:16px;font-weight:600;">Ходимлар рўйхати бўш</div>
-                        <div style="font-size:13px;margin-top:4px;">Бот орқали ходимлар рўйхатдан ўтиши билан бу ерда пайдо бўлади</div>
                     </td></tr>`;
                 return;
             }
@@ -171,15 +178,60 @@ const Dashboard = {
                 this.employeesMap[emp.id] = emp;
             });
 
+            // Filter items client-side
+            let filtered = data.items;
+
+            // 1. Apply Search
+            if (search) {
+                filtered = filtered.filter(emp => 
+                    (emp.name || '').toLowerCase().includes(search) || 
+                    (emp.branch || '').toLowerCase().includes(search)
+                );
+            }
+
+            // 2. Apply Topic & Attempt Status Filters
+            if (filterTopic !== 'all' || filterStatus !== 'all') {
+                filtered = filtered.filter(emp => {
+                    const matchedTopics = (emp.topics || []).filter(t => {
+                        const isMatchTopic = (filterTopic === 'all' || String(t.num) === filterTopic);
+                        if (!isMatchTopic) return false;
+
+                        if (filterStatus === 'att1_done') return t.attempt1 !== null && t.attempt1 !== undefined;
+                        if (filterStatus === 'att1_pending') return t.attempt1 === null || t.attempt1 === undefined;
+                        if (filterStatus === 'att2_done') return t.attempt2 !== null && t.attempt2 !== undefined;
+                        if (filterStatus === 'att2_pending') return t.attempt2 === null || t.attempt2 === undefined;
+
+                        return true;
+                    });
+                    return matchedTopics.length > 0;
+                });
+            }
+
+            const totalCount = filtered.length;
             const topicCount = data.items[0]?.topics?.length || 4;
             const dynColspan = 3 + topicCount * 4 + 3;
             if (thead) thead.innerHTML = this.buildHeader(topicCount);
+
+            // 3. Paginate (10 items per page)
+            const startIndex = (page - 1) * 10;
+            const paginated = filtered.slice(startIndex, startIndex + 10);
+
+            if (paginated.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="${dynColspan}" style="text-align:center;padding:48px;color:#9ca3af;">
+                        <div style="font-size:40px;margin-bottom:12px;">🔍</div>
+                        <div style="font-size:16px;font-weight:600;">Маълумот топилмади</div>
+                        <div style="font-size:13px;margin-top:4px;">Филтр бўйича мос келувчи ходимлар мавжуд эмас</div>
+                    </td></tr>`;
+                this.renderPagination(0, page);
+                return;
+            }
 
             const B = 'border:1px solid #e5e7eb;';
             const C = `text-align:center;padding:8px 5px;${B}font-size:12px;`;
             const L = `padding:8px 10px;${B}`;
 
-            tbody.innerHTML = data.items.map((emp, idx) => {
+            tbody.innerHTML = paginated.map((emp, idx) => {
                 const rowBg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
 
                 const topicCells = (emp.topics || []).map(t => {
@@ -215,7 +267,7 @@ const Dashboard = {
                     onmouseover="this.style.background='#f0fdf4'" 
                     onmouseout="this.style.background='${rowBg}'"
                     title="Ходим маълумотларини ва ўчириш тугмасини кўриш учун босинг">
-                    <td style="${C}font-weight:700;color:#9ca3af;">${(page - 1) * 10 + idx + 1}</td>
+                    <td style="${C}font-weight:700;color:#9ca3af;">${startIndex + idx + 1}</td>
                     <td style="${L}">
                         <div style="font-weight:700;font-size:13px;color:#111827;display:flex;align-items:center;gap:6px;">
                             <span>👤</span>
@@ -230,7 +282,7 @@ const Dashboard = {
                 </tr>`;
             }).join('');
 
-            this.renderPagination(data.total, page);
+            this.renderPagination(totalCount, page);
 
         } catch (e) {
             console.error('Employees load error:', e);
