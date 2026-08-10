@@ -24,5 +24,5 @@ WORKDIR /app/backend
 # Expose port
 EXPOSE $PORT
 
-# Start command
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Start command: create admin (idempotent) then start server
+CMD python scripts/create_superadmin.py && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
