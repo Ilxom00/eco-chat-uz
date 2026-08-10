@@ -1,9 +1,18 @@
 import uuid
+import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, text
 from app.models.topic import Topic
 from app.models.question import Question
+
+logger = logging.getLogger(__name__)
+
+
+def _force_str(val) -> str:
+    if isinstance(val, uuid.UUID):
+        return str(val)
+    return str(val).strip()
 
 
 async def get_active_topics_ordered(db: AsyncSession) -> list[Topic]:
@@ -13,8 +22,8 @@ async def get_active_topics_ordered(db: AsyncSession) -> list[Topic]:
 
 async def get_topic_by_id(db: AsyncSession, topic_id: str) -> Topic | None:
     try:
-        val_uuid = uuid.UUID(str(topic_id))
-        result = await db.execute(select(Topic).filter(Topic.id == val_uuid))
+        tid_str = _force_str(topic_id)
+        result = await db.execute(select(Topic).filter(Topic.id == tid_str))
         return result.scalar_one_or_none()
     except Exception:
         return None
@@ -23,7 +32,7 @@ async def get_topic_by_id(db: AsyncSession, topic_id: str) -> Topic | None:
 async def create_topic(db: AsyncSession, short_name: str, full_name: str) -> Topic:
     max_order_result = await db.execute(select(func.max(Topic.sequence_order)))
     max_order = max_order_result.scalar() or 0
-    topic = Topic(short_name=short_name, full_name=full_name, sequence_order=max_order + 1)
+    topic = Topic(id=str(uuid.uuid4()), short_name=short_name, full_name=full_name, sequence_order=max_order + 1)
     db.add(topic)
     await db.commit()
     await db.refresh(topic)
@@ -32,10 +41,15 @@ async def create_topic(db: AsyncSession, short_name: str, full_name: str) -> Top
 
 async def get_topic_active_question_count(db: AsyncSession, topic_id: str) -> int:
     try:
-        val_uuid = uuid.UUID(str(topic_id))
-        result = await db.execute(select(func.count(Question.id)).filter(Question.topic_id == val_uuid, Question.status == "ACTIVE"))
-        return result.scalar() or 0
-    except Exception:
+        tid_str = _force_str(topic_id)
+        # Match both string tid and raw tid to be 100% resilient across database types
+        cnt = (await db.execute(
+            text("SELECT COUNT(*) FROM questions WHERE (topic_id = :tid OR topic_id = :tid_str) AND status = 'ACTIVE'"),
+            {"tid": tid_str, "tid_str": topic_id}
+        )).scalar()
+        return cnt or 0
+    except Exception as e:
+        logger.error("Error counting questions for topic %s: %s", topic_id, e)
         return 0
 
 
@@ -66,7 +80,7 @@ async def is_topic_unlocked_for_employee(db: AsyncSession, employee_id: str, top
 async def delete_topic_cascade(db: AsyncSession, topic_id: str) -> bool:
     """Mavzuni va barcha bog'liq ma'lumotlarni to'liq o'chiradi."""
     try:
-        tid = topic_id
+        tid = _force_str(topic_id)
         await db.execute(text("""
             DELETE FROM attempt_questions WHERE attempt_id IN (
                 SELECT id FROM test_attempts WHERE topic_id = :tid
