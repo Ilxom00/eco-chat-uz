@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 eco-chat.uz — /start Command Handler
-1. Registered user → show main menu directly (persists even if bot chat is deleted and restarted)
+1. Registered user → show main menu directly
 2. New user       → show welcome text + inline branch selection buttons
 """
 from __future__ import annotations
@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 ASK_BRANCH   = 1
 ASK_FULLNAME = 0
-ASK_PHONE    = 2
 MAIN_MENU    = 10
 
 FALLBACK_BRANCHES = [
@@ -41,39 +40,51 @@ FALLBACK_BRANCHES = [
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    user_id = update.effective_user.id
-
     try:
-        status = await bot_api.get_employee_status(user_id)
-        if isinstance(status, dict) and status.get("registration_state") == "REGISTERED":
-            # Employee is already registered in DB — show main menu directly
+        user_id = update.effective_user.id
+
+        try:
+            status = await bot_api.get_employee_status(user_id)
+            if isinstance(status, dict) and status.get("registration_state") == "REGISTERED":
+                await update.message.reply_text(
+                    messages.WELCOME_BACK,
+                    reply_markup=get_main_menu_keyboard(),
+                )
+                return MAIN_MENU
+        except Exception as e:
+            logger.warning("Error fetching employee status for %d: %s", user_id, e)
+
+        # New user — fetch branches
+        branches = []
+        try:
+            resp = await bot_api.get_branches()
+            if isinstance(resp, dict):
+                branches = resp.get("branches", [])
+            elif isinstance(resp, list):
+                branches = resp
+        except Exception as e:
+            logger.error("Error fetching branches: %s", e)
+
+        if not branches:
+            branches = FALLBACK_BRANCHES
+
+        await update.message.reply_text(
+            messages.WELCOME_NEW,
+            reply_markup=get_branch_keyboard(branches),
+        )
+        return ASK_BRANCH
+
+    except Exception as e:
+        logger.error("Critical error in start_command: %s", e, exc_info=True)
+        # Bulletproof fallback — always send welcome message & branch keyboard
+        try:
             await update.message.reply_text(
-                messages.WELCOME_BACK,
-                reply_markup=get_main_menu_keyboard(),
+                messages.WELCOME_NEW,
+                reply_markup=get_branch_keyboard(FALLBACK_BRANCHES),
             )
-            return MAIN_MENU
-    except Exception as e:
-        logger.warning("Error fetching employee status for %d: %s", user_id, e)
-
-    # New or unregistered user — fetch branches
-    branches = []
-    try:
-        resp = await bot_api.get_branches()
-        if isinstance(resp, dict):
-            branches = resp.get("branches", [])
-        elif isinstance(resp, list):
-            branches = resp
-    except Exception as e:
-        logger.error("Error fetching branches: %s", e)
-
-    if not branches:
-        branches = FALLBACK_BRANCHES
-
-    await update.message.reply_text(
-        messages.WELCOME_NEW,
-        reply_markup=get_branch_keyboard(branches),
-    )
-    return ASK_BRANCH
+        except Exception:
+            pass
+        return ASK_BRANCH
 
 
 async def show_main_menu_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
