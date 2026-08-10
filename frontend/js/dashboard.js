@@ -11,27 +11,16 @@ const Dashboard = {
 
     async loadStats() {
         try {
-            // const stats = await API.getDashboardStats();
-            // MOCK DATA
-            const stats = {
-                totalEmployees: 1250,
-                started: 850,
-                completed: 620,
-                active: 45,
-                avg1: 65,
-                avg2: 82,
-                growth: 17,
-                totalTests: 1470
-            };
+            const stats = await API.getDashboardStats();
 
-            this.animateValue('kpi-total-employees', 0, stats.totalEmployees, 1000);
-            this.animateValue('kpi-started', 0, stats.started, 1000);
-            this.animateValue('kpi-completed', 0, stats.completed, 1000);
-            document.getElementById('kpi-active').textContent = stats.active; // Live updating
-            document.getElementById('kpi-avg1').textContent = stats.avg1 + '%';
-            document.getElementById('kpi-avg2').textContent = stats.avg2 + '%';
-            document.getElementById('kpi-growth').textContent = '+' + stats.growth + '%';
-            this.animateValue('kpi-total-tests', 0, stats.totalTests, 1000);
+            this.animateValue('kpi-total-employees', 0, stats.totalEmployees || 0, 1000);
+            this.animateValue('kpi-started', 0, stats.started || 0, 1000);
+            this.animateValue('kpi-completed', 0, stats.completed || 0, 1000);
+            document.getElementById('kpi-active').textContent = stats.active || 0;
+            document.getElementById('kpi-avg1').textContent = (stats.avg1 || 0) + '%';
+            document.getElementById('kpi-avg2').textContent = (stats.avg2 || 0) + '%';
+            document.getElementById('kpi-growth').textContent = '+' + (stats.growth || 0) + '%';
+            this.animateValue('kpi-total-tests', 0, stats.totalTests || 0, 1000);
         } catch (e) {
             console.error('Failed to load stats', e);
         }
@@ -40,18 +29,13 @@ const Dashboard = {
     async loadEmployees(page = 1) {
         try {
             const search = document.getElementById('empSearch')?.value || '';
-            // const data = await API.getDashboardEmployees({ page, search });
-            // MOCK DATA
-            const data = {
-                items: [
-                    { id: 1, name: 'Абдуллаев Алишер', branch: 'Тошкент ш.', topic: 'Экология асослари', attempt1: 65, attempt2: 85, diff: 20, status: 'completed' },
-                    { id: 2, name: 'Ботиров Бекзод', branch: 'Самарқанд вил.', topic: 'Чиқиндилар', attempt1: 40, attempt2: 0, diff: 0, status: 'in-progress' },
-                ],
-                total: 2,
-                pages: 1
-            };
+            const data = await API.getDashboardEmployees({ page, search });
 
             const tbody = document.getElementById('employeesTableBody');
+            if (!data || !data.items || data.items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888">Ma\'lumot yo\'q</td></tr>';
+                return;
+            }
             tbody.innerHTML = data.items.map((emp, idx) => `
                 <tr onclick="Employees.showDetail(${emp.id})">
                     <td>${(page-1)*10 + idx + 1}</td>
@@ -68,8 +52,6 @@ const Dashboard = {
                     </td>
                 </tr>
             `).join('');
-            
-            // Pagination logic here
         } catch (e) {
             console.error(e);
         }
