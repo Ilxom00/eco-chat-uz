@@ -76,9 +76,9 @@ async def get_dashboard_stats(db: AsyncSession) -> dict:
                 "diff": diff,
             })
 
-        # Overall averages
-        all_avg1 = [t["avg1"] for t in topic_stats if t["avg1"] is not None]
-        all_avg2 = [t["avg2"] for t in topic_stats if t["avg2"] is not None]
+        # Overall averages - symmetric comparison over topics where both attempts are completed
+        all_avg1 = [t["avg1"] for t in topic_stats if t["avg1"] is not None and t["avg2"] is not None]
+        all_avg2 = [t["avg2"] for t in topic_stats if t["avg2"] is not None and t["avg1"] is not None]
         overall_avg1 = round(sum(all_avg1) / len(all_avg1), 1) if all_avg1 else None
         overall_avg2 = round(sum(all_avg2) / len(all_avg2), 1) if all_avg2 else None
         overall_diff = round(overall_avg2 - overall_avg1, 1) if (overall_avg1 is not None and overall_avg2 is not None) else None
@@ -188,9 +188,8 @@ async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: in
                 s2 = round(s2_raw / 15 * 100) if s2_raw is not None else None
                 diff = (s2 - s1) if (s1 is not None and s2 is not None) else None
 
-                if s1 is not None:
+                if s1 is not None and s2 is not None:
                     scores1.append(s1)
-                if s2 is not None:
                     scores2.append(s2)
 
                 # Status
