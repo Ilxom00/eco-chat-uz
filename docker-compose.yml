@@ -1,5 +1,22 @@
 version: '3.8'
 
+# ═══════════════════════════════════════════════════════════════════
+#  eco-chat.uz — Docker Compose
+#
+#  ⚠️  MA'LUMOT XAVFSIZLIGI:
+#  PostgreSQL va Redis ma'lumotlari HOST FAYL TIZIMIDA saqlanadi:
+#    /opt/ecochat-data/postgres  ← PostgreSQL
+#    /opt/ecochat-data/redis     ← Redis
+#
+#  Bu degani:
+#    ✅ docker-compose down -v   → MA'LUMOTLAR SAQLANIB QOLADI
+#    ✅ docker-compose up --build → MA'LUMOTLAR SAQLANIB QOLADI
+#    ✅ Server restart            → MA'LUMOTLAR SAQLANIB QOLADI
+#    ✅ Image rebuild             → MA'LUMOTLAR SAQLANIB QOLADI
+#
+#  ⚠️  MA'LUMOTNI FAQAT rm -rf /opt/ecochat-data/ bilan o'chirishingiz mumkin
+# ═══════════════════════════════════════════════════════════════════
+
 services:
   postgres:
     image: postgres:15-alpine
@@ -9,13 +26,14 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecochat_pass}
       POSTGRES_DB: ecochat_db
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - backup_data:/backups
+      # BIND MOUNT — host fayl tizimida saqlanadi, hech qachon yo'qolmaydi
+      - /opt/ecochat-data/postgres:/var/lib/postgresql/data
+      - /opt/ecochat-data/backups:/backups
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ecochat -d ecochat_db"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
     networks:
       - ecochat-network
 
@@ -24,7 +42,8 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes
     volumes:
-      - redis_data:/data
+      # BIND MOUNT — host fayl tizimida saqlanadi
+      - /opt/ecochat-data/redis:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -39,7 +58,7 @@ services:
     restart: unless-stopped
     env_file: .env
     volumes:
-      - backup_data:/backups
+      - /opt/ecochat-data/backups:/backups
     ports:
       - "8000:8000"
     depends_on:
@@ -63,10 +82,8 @@ services:
     networks:
       - ecochat-network
 
-volumes:
-  postgres_data:
-  redis_data:
-  backup_data:
+# Named volumes olib tashlandi — endi bind mounts ishlatiladi
+# docker-compose down -v endi ma'lumotlarni o'chira OLMAYDI
 
 networks:
   ecochat-network:
