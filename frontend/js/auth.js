@@ -19,9 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
             errorMsg.style.display = 'none';
 
             try {
-                // Mock Auth since backend isn't ready
-                // const res = await API.login(username, password);
-                const res = { token: 'mock-jwt-token' }; // MOCK
+                const res = await API.login(username, password);
                 
                 if (res.token) {
                     localStorage.setItem('token', res.token);
