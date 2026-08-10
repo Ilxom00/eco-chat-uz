@@ -89,7 +89,7 @@ async def auto_restore_if_empty(db: AsyncSession):
             await auto_backup_data(db)
             return
 
-        # Empty Database Safety Lock
+        # Empty Database Safety Lock (warn only, do not crash to keep system online)
         topic_cnt = 0
         try:
             topic_cnt = (await db.execute(text("SELECT COUNT(*) FROM topics"))).scalar() or 0
@@ -97,9 +97,8 @@ async def auto_restore_if_empty(db: AsyncSession):
             pass
 
         if is_prod and emp_cnt == 0 and topic_cnt > 0:
-            logger.critical("🚨 CRITICAL: Unexpected empty production database detected. Data Safety Lock triggered!")
-            import sys
-            sys.exit("CRITICAL: Unexpected empty production database detected. Startup aborted to protect persistent data.")
+            logger.warning("⚠️ WARNING: Empty production database detected. DataGuard is starting restore...")
+
 
 
         target_path = get_backup_path()
