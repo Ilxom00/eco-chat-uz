@@ -545,7 +545,13 @@ async def get_attempt_detail_for_dashboard(
         }
     except Exception as e:
         logger.error("Error fetching attempt detail for %s: %s", attempt_id, e, exc_info=True)
-        return {}
+        import traceback
+        return {
+            "error_msg": str(e),
+            "error_trace": traceback.format_exc(),
+            "questions": []
+        }
+
 
 
 
