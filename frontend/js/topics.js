@@ -21,8 +21,16 @@ const Topics = {
                 }
             }
 
-            if (!topics || topics.length === 0) {
-                container.innerHTML = '<div style="padding:24px;color:#9ca3af;font-weight:600;">Мавзулар топилмади. "+ Янги мавзу" тугмасини босинг.</div>';
+            if (!topics || !Array.isArray(topics) || topics.length === 0) {
+                // Second attempt reseed
+                try {
+                    await API.fetch('/topics/reseed', { method: 'POST' });
+                    topics = await API.getTopics();
+                } catch (e) {}
+            }
+
+            if (!topics || !Array.isArray(topics) || topics.length === 0) {
+                container.innerHTML = '<div style="padding:24px;color:#dc2626;font-weight:600;">Мавзулар юкланмоқда... Саҳифани (F5) босиб қайта янгиланг.</div>';
                 return;
             }
 
@@ -48,194 +56,132 @@ const Topics = {
                                 cursor: pointer;
                                 font-size: 13px;
                                 font-weight: 600;
-                                display: flex;
+                                display: inline-flex;
                                 align-items: center;
                                 gap: 6px;
-                                transition: transform 0.15s;
+                                box-shadow: 0 2px 6px rgba(220, 38, 38, 0.2);
                             "
-                            onmouseover="this.style.transform='scale(1.04)'"
-                            onmouseout="this.style.transform='scale(1)'"
                         >
                             🗑️ Ўчириш
                         </button>
                     </div>
                 </div>
             `).join('');
+
         } catch (e) {
-            container.innerHTML = `<div style="padding:20px;color:var(--danger)">Хатолик: ${e.message}</div>`;
-            console.error(e);
+            console.error('Failed to load topics:', e);
+            // Auto trigger reseed and reload
+            try {
+                await API.fetch('/topics/reseed', { method: 'POST' });
+                const topics = await API.getTopics();
+                if (topics && Array.isArray(topics) && topics.length > 0) {
+                    this.loadTopics();
+                    return;
+                }
+            } catch (err) {}
+            container.innerHTML = `<div style="padding:24px;color:#dc2626;font-weight:600;">Хатолик: ${e.message}. Саҳифани қайта янгиланг.</div>`;
         }
-    },
-
-    confirmDelete(topicId, topicName) {
-        const existing = document.getElementById('deleteTopicModal');
-        if (existing) existing.remove();
-
-        const modal = document.createElement('div');
-        modal.id = 'deleteTopicModal';
-        modal.style.cssText = `
-            position: fixed; inset: 0; z-index: 9999;
-            background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
-            display: flex; align-items: center; justify-content: center;
-        `;
-        modal.innerHTML = `
-            <div style="
-                background: #fff;
-                border-radius: 16px;
-                padding: 32px;
-                max-width: 440px;
-                width: 90%;
-                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                text-align: center;
-            ">
-                <div style="font-size:48px; margin-bottom:12px;">⚠️</div>
-                <h2 style="margin:0 0 8px 0; color: #dc2626;">Ўчиришни тасдиқланг</h2>
-                <p style="color:#6b7280; margin:0 0 20px; font-size:15px; line-height:1.5;">
-                    <strong style="color:#111827;">"${topicName}"</strong> мавзусини ўчирасизми?<br>
-                    <span style="color:#dc2626; font-weight:600;">
-                        Барча саволлар, натижалар ва боғлиқ маълумотлар ҳам ўчади!
-                    </span>
-                </p>
-                <div style="display:flex; gap:12px; justify-content:center;">
-                    <button 
-                        onclick="document.getElementById('deleteTopicModal').remove()"
-                        style="
-                            padding: 12px 24px; border-radius: 8px; border: 2px solid #e5e7eb;
-                            background: transparent; cursor: pointer; font-size: 15px; font-weight: 600;
-                            color: #374151;
-                        "
-                    >Бекор қилиш</button>
-                    <button 
-                        id="confirmDeleteBtn"
-                        onclick="Topics.executDelete('${topicId}')"
-                        style="
-                            padding: 12px 24px; border-radius: 8px; border: none;
-                            background: linear-gradient(135deg, #dc2626, #b91c1c);
-                            color: white; cursor: pointer; font-size: 15px; font-weight: 600;
-                        "
-                    >🗑️ Ҳа, ўчириш</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
-    },
-
-    async executDelete(topicId) {
-        const btn = document.getElementById('confirmDeleteBtn');
-        if (btn) { btn.textContent = 'Ўчирилмоқда...'; btn.disabled = true; }
-
-        try {
-            await API.deleteTopic(topicId);
-            document.getElementById('deleteTopicModal')?.remove();
-            Topics.showToast('✅ Мавзу муваффақиятли ўчирилди!', 'success');
-            await this.loadTopics();
-        } catch (e) {
-            document.getElementById('deleteTopicModal')?.remove();
-            Topics.showToast(`❌ Хато: ${e.message}`, 'error');
-            console.error(e);
-        }
-    },
-
-    showToast(msg, type) {
-        const toast = document.createElement('div');
-        toast.style.cssText = `
-            position: fixed; bottom: 24px; right: 24px; z-index: 99999;
-            padding: 14px 20px; border-radius: 12px; font-weight: 600;
-            background: ${type === 'success' ? '#16a34a' : '#dc2626'};
-            color: white; font-size: 14px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-        `;
-        toast.textContent = msg;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
     },
 
     showCreateModal() {
-        const existing = document.getElementById('createTopicModal');
-        if (existing) existing.remove();
+        document.getElementById('createTopicModal')?.remove();
 
         const modal = document.createElement('div');
         modal.id = 'createTopicModal';
-        modal.style.cssText = `
-            position: fixed; inset: 0; z-index: 9999;
-            background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
-            display: flex; align-items: center; justify-content: center;
-        `;
+        modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.65);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;';
         modal.innerHTML = `
-            <div style="
-                background: #fff;
-                border-radius: 16px;
-                padding: 32px;
-                max-width: 480px;
-                width: 90%;
-                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            ">
-                <h2 style="margin:0 0 20px 0;">+ Янги мавзу қўшиш</h2>
+            <div style="background:#fff;border-radius:20px;padding:32px;max-width:480px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,0.3);">
+                <h2 style="margin:0 0 20px 0;color:#111827;font-size:20px;">➕ Янги мавзу қўшиш</h2>
                 <div style="margin-bottom:16px;">
-                    <label style="display:block; margin-bottom:6px; font-weight:600;">Қисқа номи</label>
-                    <input id="topicShortName" type="text" placeholder="Масалан: Экология" style="
-                        width:100%; padding:10px 14px; border-radius:8px;
-                        border:2px solid #e5e7eb; font-size:15px; box-sizing:border-box;
-                    ">
+                    <label style="display:block;margin-bottom:6px;font-weight:600;font-size:13px;color:#374151;">Қисқа номи (масалан: 5-Мавзу):</label>
+                    <input type="text" id="newTopicShortName" placeholder="5-Мавзу" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;">
                 </div>
                 <div style="margin-bottom:24px;">
-                    <label style="display:block; margin-bottom:6px; font-weight:600;">Тўлиқ номи</label>
-                    <input id="topicFullName" type="text" placeholder="Масалан: Экологик экспертиза асослари" style="
-                        width:100%; padding:10px 14px; border-radius:8px;
-                        border:2px solid #e5e7eb; font-size:15px; box-sizing:border-box;
-                    ">
+                    <label style="display:block;margin-bottom:6px;font-weight:600;font-size:13px;color:#374151;">Тўлиқ номи:</label>
+                    <input type="text" id="newTopicFullName" placeholder="Мавзунинг тўлиқ номи..." style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;">
                 </div>
-                <div style="display:flex; gap:12px; justify-content:flex-end;">
-                    <button onclick="document.getElementById('createTopicModal').remove()"
-                        style="padding:10px 20px; border-radius:8px; border:2px solid #e5e7eb;
-                        background:transparent; cursor:pointer; font-size:14px; font-weight:600;">
-                        Бекор қилиш
-                    </button>
-                    <button id="saveTopicBtn" onclick="Topics.submitCreate()"
-                        style="padding:10px 20px; border-radius:8px; border:none;
-                        background:#166534; color:white; cursor:pointer; font-size:14px; font-weight:700;">
-                        Сақлаш
-                    </button>
+                <div style="display:flex;gap:12px;justify-content:flex-end;">
+                    <button onclick="document.getElementById('createTopicModal').remove()" style="padding:10px 20px;border-radius:8px;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-size:14px;font-weight:600;">Бекор қилиш</button>
+                    <button id="saveTopicBtn" onclick="Topics.submitCreateTopic()" style="padding:10px 20px;border-radius:8px;border:none;background:#166534;color:#fff;cursor:pointer;font-size:14px;font-weight:600;">💾 Сақлаш</button>
                 </div>
-            </div>
-        `;
+            </div>`;
+
         document.body.appendChild(modal);
-        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
-        document.getElementById('topicShortName').focus();
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        document.getElementById('newTopicShortName').focus();
     },
 
-    async submitCreate() {
-        const short = document.getElementById('topicShortName').value.trim();
-        const full = document.getElementById('topicFullName').value.trim();
-        if (!short || !full) { alert('Илтимос, иккала майдонни ҳам тўлдиринг!'); return; }
+    async submitCreateTopic() {
+        const shortName = document.getElementById('newTopicShortName').value.trim();
+        const fullName = document.getElementById('newTopicFullName').value.trim();
+
+        if (!shortName || !fullName) {
+            alert('Илтимос, мавзунинг қисқа ва тўлиқ номларини киритинг!');
+            return;
+        }
 
         const btn = document.getElementById('saveTopicBtn');
         if (btn) { btn.textContent = 'Сақланмоқда...'; btn.disabled = true; }
 
         try {
-            await API.createTopic({ short_name: short, full_name: full });
+            await API.createTopic({ short_name: shortName, full_name: fullName });
             document.getElementById('createTopicModal')?.remove();
-            Topics.showToast('✅ Янги мавзу муваффақиятли яратилди!', 'success');
-            await this.loadTopics();
+            
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;padding:14px 20px;border-radius:12px;font-weight:700;background:#16a34a;color:#fff;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,0.2);';
+            toast.textContent = '✅ Янги мавзу муваффақиятли қўшилди!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+
+            this.loadTopics();
         } catch (e) {
-            if (btn) { btn.textContent = 'Сақлаш'; btn.disabled = false; }
+            if (btn) { btn.textContent = '💾 Сақлаш'; btn.disabled = false; }
+            alert('Хатолик: ' + (e.message || e));
+        }
+    },
+
+    confirmDelete(topicId, topicName) {
+        document.getElementById('deleteTopicModal')?.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'deleteTopicModal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.65);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;';
+        modal.innerHTML = `
+            <div style="background:#fff;border-radius:20px;padding:32px;max-width:440px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,0.3);text-align:center;">
+                <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+                <h2 style="margin:0 0 10px 0;color:#dc2626;font-size:20px;">Мавзуни ўчириш</h2>
+                <p style="color:#6b7280;margin:0 0 24px;font-size:14px;line-height:1.5;">
+                    Сиз чиндан ҳам <strong style="color:#111827;">"${topicName}"</strong> мавзусини ва унга тегишли <strong>барча саволларни</strong> базадан ўчирмоқчимисиз?<br>
+                    <span style="color:#dc2626;font-size:12px;display:block;margin-top:6px;">Бу амални ортга қайтариб бўлмайди!</span>
+                </p>
+                <div style="display:flex;gap:12px;justify-content:center;">
+                    <button onclick="document.getElementById('deleteTopicModal').remove()" style="padding:10px 24px;border-radius:10px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;font-size:14px;font-weight:600;color:#374151;">Бекор қилиш</button>
+                    <button id="execDeleteTopicBtn" onclick="Topics.executeDelete('${topicId}')" style="padding:10px 24px;border-radius:10px;border:none;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;cursor:pointer;font-size:14px;font-weight:700;">🗑️ Ҳа, ўчириш</button>
+                </div>
+            </div>`;
+
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    },
+
+    async executeDelete(topicId) {
+        const btn = document.getElementById('execDeleteTopicBtn');
+        if (btn) { btn.textContent = 'Ўчирилмоқда...'; btn.disabled = true; }
+
+        try {
+            await API.deleteTopic(topicId);
+            document.getElementById('deleteTopicModal')?.remove();
+            
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;padding:14px 20px;border-radius:12px;font-weight:700;background:#16a34a;color:#fff;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,0.2);';
+            toast.textContent = '✅ Мавзу ва унинг барча саволлари ўчирилди!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+
+            this.loadTopics();
+        } catch (e) {
+            document.getElementById('deleteTopicModal')?.remove();
             alert('Хатолик: ' + (e.message || e));
         }
     }
 };
-
-document.addEventListener('DOMContentLoaded', () => {
-    Topics.init();
-
-    const btn = document.querySelector('[data-target="topics"]');
-    if (btn) {
-        btn.addEventListener('click', () => Topics.init());
-    }
-
-    window.addEventListener('hashchange', () => {
-        if (window.location.hash === '#topics') {
-            Topics.init();
-        }
-    });
-});
