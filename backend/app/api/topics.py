@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.api.deps import get_current_admin
@@ -9,12 +9,28 @@ router = APIRouter(tags=["topics"], dependencies=[Depends(get_current_admin)])
 @router.get("/")
 async def list_topics(db: AsyncSession = Depends(get_db)):
     topics = await topic_service.get_active_topics_ordered(db)
-    return topics
+    from app.services.topic_service import get_topic_active_question_count
+    result = []
+    for t in topics:
+        q_count = await get_topic_active_question_count(db, str(t.id))
+        result.append({
+            "id": str(t.id),
+            "short_name": t.short_name,
+            "full_name": t.full_name,
+            "q_count": q_count,
+            "is_active": t.is_active,
+        })
+    return result
 
 @router.post("/")
 async def create_topic(data: dict, db: AsyncSession = Depends(get_db)):
     topic = await topic_service.create_topic(db, short_name=data.get("short_name"), full_name=data.get("full_name"))
-    return topic
+    return {"id": str(topic.id), "short_name": topic.short_name, "full_name": topic.full_name, "q_count": 0}
+
+@router.delete("/{id}")
+async def delete_topic(id: str, db: AsyncSession = Depends(get_db)):
+    await topic_service.delete_topic_cascade(db, id)
+    return {"message": "Mavzu va barcha bog'liq ma'lumotlar o'chirildi"}
 
 @router.patch("/{id}")
 async def update_topic(id: str, data: dict, db: AsyncSession = Depends(get_db)):
