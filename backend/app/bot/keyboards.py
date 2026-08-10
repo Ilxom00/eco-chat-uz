@@ -22,7 +22,7 @@ def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
 
 def get_answer_keyboard(answers: list) -> InlineKeyboardMarkup:
     keyboard = []
-    labels = ['A', 'B', 'C', 'D']
+    labels = ['А', 'Б', 'В', 'Г']
     for idx, answer in enumerate(answers):
         label = labels[idx] if idx < len(labels) else str(idx+1)
         keyboard.append([InlineKeyboardButton(f"{label}) {answer['text']}", callback_data=f"ans:{idx}:{answer['id']}")])
