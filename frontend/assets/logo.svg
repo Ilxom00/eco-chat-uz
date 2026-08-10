@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2E7D32;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1B5E20;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Chat bubble -->
+  <path d="M100,20 C44.77,20 0,60 0,110 C0,137.6 15.1,162.3 39.5,178.6 L30,195 C29.3,196.4 30.2,198.1 31.8,198.1 L68.2,198.1 C78.2,199.3 88.9,200 100,200 C155.23,200 200,160 200,110 C200,60 155.23,20 100,20 Z" fill="url(#grad1)" />
+  <!-- Leaf -->
+  <path d="M100,40 C140,40 160,70 160,110 C160,150 120,170 100,170 C80,170 40,150 40,110 C40,70 60,40 100,40 Z" fill="#F57F17" />
+  <path d="M100,170 C100,170 100,105 100,40 C100,40 60,70 60,110 C60,150 100,170 100,170 Z" fill="#FFF8E1" opacity="0.3" />
+</svg>
