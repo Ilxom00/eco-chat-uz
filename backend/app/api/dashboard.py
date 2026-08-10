@@ -18,3 +18,8 @@ async def get_dashboard_employees(page: int = 1, page_size: int = 10, db: AsyncS
 @router.get("/employees/{id}/detail")
 async def get_dashboard_employee_detail(id: str, db: AsyncSession = Depends(get_db)):
     return await result_service.get_employee_detail_for_report(db, id)
+
+@router.get("/attempts/{attempt_id}/detail")
+async def get_dashboard_attempt_detail(attempt_id: str, db: AsyncSession = Depends(get_db)):
+    return await result_service.get_attempt_detail_for_dashboard(db, attempt_id)
+
