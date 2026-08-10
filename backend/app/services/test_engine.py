@@ -524,7 +524,7 @@ async def get_current_question(
     now = _utc_now()
     remaining_seconds = 0
     if aq.question_deadline_at:
-        remaining_seconds = max(0, int((aq.question_deadline_at - now).total_seconds()))
+        remaining_seconds = max(0, int((_make_aware(aq.question_deadline_at) - now).total_seconds()))
 
     # Build answer list (WITHOUT is_correct field — never send to client)
     safe_answers = [
@@ -596,7 +596,7 @@ async def get_current_question_full(
     now = _utc_now()
     remaining_seconds = 0
     if aq.question_deadline_at:
-        remaining_seconds = max(0, int((aq.question_deadline_at - now).total_seconds()))
+        remaining_seconds = max(0, int((_make_aware(aq.question_deadline_at) - now).total_seconds()))
 
     # Safe answers (no is_correct, no correct_answer_id)
     safe_answers = [
