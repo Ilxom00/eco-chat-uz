@@ -21,20 +21,27 @@ def _to_uuid(val: str | uuid.UUID):
 
 async def create_question_with_answers(db: AsyncSession, topic_id: str, text_content: str, answers: list[dict]) -> Question:
     if len(answers) != 4:
-        raise ValueError("Exactly 4 answers required")
+        raise ValueError("Барча 4 та вариант киритилиши шарт")
     if sum(1 for a in answers if a.get("is_correct")) != 1:
-        raise ValueError("Exactly 1 correct answer required")
+        raise ValueError("Аниқ 1 та тўғри жавоб танланиши шарт")
         
     tid_val = _to_uuid(topic_id)
-    question = Question(topic_id=tid_val, text=text_content, status='ACTIVE')
+    question_uuid = uuid.uuid4()
+    
+    question = Question(
+        id=question_uuid,
+        topic_id=tid_val,
+        text=text_content,
+        status='ACTIVE'
+    )
     db.add(question)
-    await db.flush()
     
     for i, ans in enumerate(answers):
         q_ans = QuestionAnswer(
-            question_id=question.id,
+            id=uuid.uuid4(),
+            question_id=question_uuid,
             text=ans["text"],
-            is_correct=ans.get("is_correct", False),
+            is_correct=bool(ans.get("is_correct", False)),
             option_label=ans.get("option_label", ["A", "B", "C", "D"][i]),
             sort_order=i+1
         )
