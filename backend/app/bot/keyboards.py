@@ -25,11 +25,35 @@ def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
 
 
 def get_answer_keyboard(answers: list) -> InlineKeyboardMarkup:
+    """
+    Build answer keyboard. Each answer on its own row.
+    Long answer text is split into multiple lines within the button.
+    Telegram supports multi-line button text natively.
+    """
     keyboard = []
     labels = ['А', 'Б', 'В', 'Г']
     for idx, answer in enumerate(answers):
-        label = labels[idx] if idx < len(labels) else str(idx+1)
-        keyboard.append([InlineKeyboardButton(f"{label}) {answer['text']}", callback_data=f"ans:{idx+1}:{answer['id']}")])
+        label = labels[idx] if idx < len(labels) else str(idx + 1)
+        text = answer.get('text', '')
+        display_order = answer.get('display_order', idx + 1)
+        # Telegram buttons support up to ~200 chars; wrap long text with newlines
+        btn_text = f"{label}) {text}"
+        # Split very long text into readable chunks at word boundaries
+        if len(btn_text) > 60:
+            words = btn_text.split(' ')
+            lines = []
+            current_line = ''
+            for word in words:
+                if len(current_line) + len(word) + 1 <= 60:
+                    current_line = (current_line + ' ' + word).strip()
+                else:
+                    if current_line:
+                        lines.append(current_line)
+                    current_line = word
+            if current_line:
+                lines.append(current_line)
+            btn_text = '\n'.join(lines)
+        keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"ans:{idx+1}:{answer['id']}")])
     return InlineKeyboardMarkup(keyboard)
 
 
