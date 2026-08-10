@@ -55,6 +55,9 @@ const API = {
     async getEmployeeDetail(id) {
         return this.fetch(`/employees/${id}`);
     },
+    async deleteEmployee(id) {
+        return this.fetch(`/employees/${id}`, { method: 'DELETE' });
+    },
 
     // Topics
     async getTopics() {
@@ -79,6 +82,12 @@ const API = {
     // Branches
     async getBranches() {
         return this.fetch('/branches');
+    },
+    async createBranch(data) {
+        return this.fetch('/branches', { method: 'POST', body: JSON.stringify(data) });
+    },
+    async deleteBranch(id) {
+        return this.fetch(`/branches/${id}`, { method: 'DELETE' });
     },
 
     // Reports
