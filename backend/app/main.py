@@ -1,7 +1,7 @@
 """
 eco-chat.uz — FastAPI Application Entry Point
 Includes: API routes, Telegram bot startup, static files, health check
-Full Server Deploy - Persistent DataGuard Enabled: 2026-08-11
+Full Server Restart Simulation Triggered: 2026-08-11
 """
 from contextlib import asynccontextmanager
 import datetime
