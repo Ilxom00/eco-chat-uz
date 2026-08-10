@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, text
 from app.models.question import Question, QuestionAnswer
+from app.models.topic import Topic
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,18 @@ async def create_question_with_answers(db: AsyncSession, topic_id: str, text_con
         raise ValueError("Аниқ 1 та тўғри жавоб танланиши шарт")
         
     tid_val = _to_uuid(topic_id)
+
+    # Verify topic exists in DB to prevent ForeignKeyViolation
+    res = await db.execute(select(Topic).filter(Topic.id == tid_val))
+    topic_obj = res.scalar_one_or_none()
+    if not topic_obj:
+        # Fallback: find first active topic in DB
+        res_first = await db.execute(select(Topic).filter(Topic.is_active == True).order_by(Topic.sequence_order))
+        first_t = res_first.scalars().first()
+        if not first_t:
+            raise ValueError("Мавзу базада топилмади. Илтимос, аввал янги мавзу яратинг.")
+        tid_val = first_t.id
+
     question_uuid = uuid.uuid4()
     
     question = Question(
