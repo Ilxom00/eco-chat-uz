@@ -104,6 +104,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("❌ Branch seeding failed: {}", e)
 
+    # Seed topics and questions (4 topics, 115 questions)
+    try:
+        from app.seeds.seed import seed_topics_and_questions
+        result = await seed_topics_and_questions(engine)
+        if result:
+            logger.info("✅ 4 mavzu va 115 savol yuklandi")
+        else:
+            logger.info("✅ Savollar allaqachon mavjud")
+    except Exception as e:
+        logger.error("❌ Question seeding failed: {}", e)
 
     # Redis connectivity check
     try:
