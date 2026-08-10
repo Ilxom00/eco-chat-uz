@@ -50,28 +50,22 @@ class BotAPIClient:
             }
 
     async def get_topics(self, telegram_user_id: int) -> List[Dict[str, Any]]:
+        """Always return active topics with clickable buttons for Telegram bot."""
         async with AsyncSessionLocal() as db:
-            emp = await employee_service.get_employee_by_telegram_id(db, telegram_user_id)
-            if not emp:
-                return []
-            
-            topics_raw = await topic_service.get_all_topics_status_for_employee(db, str(emp.id))
-
-            if not topics_raw:
+            topics = await topic_service.get_active_topics_ordered(db)
+            if not topics:
                 await seed_topics_and_questions(engine, force=True)
-                topics_raw = await topic_service.get_all_topics_status_for_employee(db, str(emp.id))
+                topics = await topic_service.get_active_topics_ordered(db)
 
             result = []
-            for item in topics_raw:
-                t = item.get("topic")
-                if t:
-                    result.append({
-                        "id": str(t.id),
-                        "name": f"{t.short_name} — {t.full_name}",
-                        "short_name": t.short_name,
-                        "full_name": t.full_name,
-                        "status": item.get("status", "available"),
-                    })
+            for t in topics:
+                result.append({
+                    "id": str(t.id),
+                    "name": f"{t.short_name} — {t.full_name}",
+                    "short_name": t.short_name,
+                    "full_name": t.full_name,
+                    "status": "available",
+                })
             return result
 
     async def get_topic(self, topic_id: str) -> Dict[str, Any]:
