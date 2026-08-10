@@ -239,28 +239,63 @@ async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: in
         return [], 0
 
 
-async def get_attempt_detail_for_dashboard(db: AsyncSession, attempt_id: str) -> dict:
+async def get_attempt_detail_for_dashboard(
+    db: AsyncSession, 
+    attempt_id: str, 
+    emp_id: str = None, 
+    topic_id: str = None, 
+    attempt_num: int = 1
+) -> dict:
     """
     Get detailed 15 questions and answers analysis for an attempt.
+    Supports querying by attempt_id, OR fallback querying by emp_id, topic_id, attempt_num.
+    Also fallbacks to assignment's ETQ if attempt_questions table rows were not created.
     """
     import json
     try:
-        aid_str = str(attempt_id).strip()
-        attempt_res = await db.execute(text("""
-            SELECT ta.id, ta.employee_id, ta.topic_id, ta.attempt_number, ta.score, ta.status, 
-                   ta.started_at, ta.completed_at,
-                   e.full_name, COALESCE(b.name, '—') as branch_name,
-                   t.short_name, t.full_name as topic_full_name
-            FROM test_attempts ta
-            JOIN employees e ON CAST(ta.employee_id AS text) = CAST(e.id AS text)
-            LEFT JOIN branches b ON CAST(e.branch_id AS text) = CAST(b.id AS text)
-            JOIN topics t ON CAST(ta.topic_id AS text) = CAST(t.id AS text)
-            WHERE CAST(ta.id AS text) = :aid
-        """), {"aid": aid_str})
-        att = attempt_res.fetchone()
+        aid_str = str(attempt_id).strip() if attempt_id else ""
+        att = None
+
+        # 1. Try finding by attempt_id if valid
+        if aid_str and aid_str not in ("by-topic", "null", "undefined"):
+            attempt_res = await db.execute(text("""
+                SELECT ta.id, ta.employee_id, ta.topic_id, ta.attempt_number, ta.score, ta.status, 
+                       ta.started_at, ta.completed_at, ta.assignment_id,
+                       e.full_name, COALESCE(b.name, '—') as branch_name,
+                       t.short_name, t.full_name as topic_full_name
+                FROM test_attempts ta
+                JOIN employees e ON CAST(ta.employee_id AS text) = CAST(e.id AS text)
+                LEFT JOIN branches b ON CAST(e.branch_id AS text) = CAST(b.id AS text)
+                JOIN topics t ON CAST(ta.topic_id AS text) = CAST(t.id AS text)
+                WHERE CAST(ta.id AS text) = :aid
+            """), {"aid": aid_str})
+            att = attempt_res.fetchone()
+
+        # 2. Fallback finding by (emp_id, topic_id, attempt_num) if att not found
+        if not att and emp_id and topic_id:
+            e_str = str(emp_id).strip()
+            t_str = str(topic_id).strip()
+            attempt_res = await db.execute(text("""
+                SELECT ta.id, ta.employee_id, ta.topic_id, ta.attempt_number, ta.score, ta.status, 
+                       ta.started_at, ta.completed_at, ta.assignment_id,
+                       e.full_name, COALESCE(b.name, '—') as branch_name,
+                       t.short_name, t.full_name as topic_full_name
+                FROM test_attempts ta
+                JOIN employees e ON CAST(ta.employee_id AS text) = CAST(e.id AS text)
+                LEFT JOIN branches b ON CAST(e.branch_id AS text) = CAST(b.id AS text)
+                JOIN topics t ON CAST(ta.topic_id AS text) = CAST(t.id AS text)
+                WHERE CAST(ta.employee_id AS text) = :eid 
+                  AND CAST(ta.topic_id AS text) = :tid 
+                  AND ta.attempt_number = :att_num
+            """), {"eid": e_str, "tid": t_str, "att_num": int(attempt_num)})
+            att = attempt_res.fetchone()
+
         if not att:
-            logger.warning("Attempt %s not found in test_attempts table", aid_str)
+            logger.warning("Attempt not found for id=%s emp=%s topic=%s att=%s", attempt_id, emp_id, topic_id, attempt_num)
             return {}
+
+        real_attempt_id = str(att[0])
+        asgn_id = str(att[8]) if att[8] else None
 
         # Calculate duration
         started_at = att[6]
@@ -275,7 +310,7 @@ async def get_attempt_detail_for_dashboard(db: AsyncSession, attempt_id: str) ->
             else:
                 duration_str = f"{rem_secs} сония"
 
-        # Get attempt questions ordered by display_order (LEFT JOINs to ensure non-empty results)
+        # 3. Get attempt questions ordered by display_order
         aq_res = await db.execute(text("""
             SELECT aq.display_order, aq.answer_display_order, aq.selected_answer_id, 
                    aq.is_correct, aq.response_time_ms, aq.answer_status,
@@ -286,8 +321,26 @@ async def get_attempt_detail_for_dashboard(db: AsyncSession, attempt_id: str) ->
             LEFT JOIN questions qst ON CAST(aq.question_id AS text) = CAST(qst.id AS text)
             WHERE CAST(aq.attempt_id AS text) = :aid
             ORDER BY aq.display_order ASC
-        """), {"aid": aid_str})
+        """), {"aid": real_attempt_id})
         aq_rows = aq_res.fetchall()
+
+        # 4. Fallback to employee_topic_questions if aq_rows is empty
+        if not aq_rows and asgn_id:
+            etq_res = await db.execute(text("""
+                SELECT etq.base_slot as display_order, 
+                       etq.answers_snapshot as answer_display_order, 
+                       NULL as selected_answer_id,
+                       NULL as is_correct, 
+                       0 as response_time_ms, 
+                       'COMPLETED' as answer_status,
+                       COALESCE(etq.question_text_snapshot, qst.text, '—') as q_text,
+                       etq.answers_snapshot, etq.correct_answer_id
+                FROM employee_topic_questions etq
+                LEFT JOIN questions qst ON CAST(etq.question_id AS text) = CAST(qst.id AS text)
+                WHERE CAST(etq.assignment_id AS text) = :asgn_id
+                ORDER BY etq.base_slot ASC
+            """), {"asgn_id": asgn_id})
+            aq_rows = etq_res.fetchall()
 
         questions = []
         for r in aq_rows:
@@ -348,10 +401,10 @@ async def get_attempt_detail_for_dashboard(db: AsyncSession, attempt_id: str) ->
         pct = round(raw_score / 15 * 100)
 
         return {
-            "attempt_id": str(att[0]),
-            "employee_name": att[8],
-            "branch_name": att[9],
-            "topic_name": f"{att[10]} — {att[11]}",
+            "attempt_id": real_attempt_id,
+            "employee_name": att[9],
+            "branch_name": att[10],
+            "topic_name": f"{att[11]} — {att[12]}",
             "attempt_number": att[3],
             "score": raw_score,
             "percentage": pct,
@@ -362,6 +415,7 @@ async def get_attempt_detail_for_dashboard(db: AsyncSession, attempt_id: str) ->
     except Exception as e:
         logger.error("Error fetching attempt detail for %s: %s", attempt_id, e, exc_info=True)
         return {}
+
 
 
 
