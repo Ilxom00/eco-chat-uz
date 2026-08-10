@@ -6,7 +6,7 @@ from app.services import employee_service
 
 router = APIRouter(tags=["employees"], dependencies=[Depends(get_current_admin)])
 
-@router.get("/")
+@router.get("")
 async def list_employees(page: int = 1, page_size: int = 10, db: AsyncSession = Depends(get_db)):
     employees, total = await employee_service.list_employees(db, {}, page, page_size)
     return {"items": employees, "total": total}
