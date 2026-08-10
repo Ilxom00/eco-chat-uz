@@ -45,7 +45,7 @@ class BotAPIClient:
     async def get_topics(self, telegram_user_id: int) -> list:
         return await self._request("GET", f"/employee/{telegram_user_id}/topics")
         
-    async def get_topic(self, topic_id: int) -> dict:
+    async def get_topic(self, topic_id: str) -> dict:
         return await self._request("GET", f"/topics/{topic_id}")
 
     async def start_attempt(self, telegram_user_id: int, topic_id: int, attempt_number: int, seminar_confirmed: bool = False) -> dict:
