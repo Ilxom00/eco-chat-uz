@@ -15,7 +15,7 @@ async def login(response: Response, data: dict, db: AsyncSession = Depends(get_d
         
     token = await create_access_token_for_admin(admin.id, admin.username)
     response.set_cookie(key="jwt", value=token, httponly=True)
-    return {"message": "Success", "admin": {"username": admin.username, "full_name": admin.full_name}}
+    return {"token": token, "message": "Success", "admin": {"username": admin.username, "full_name": admin.full_name}}
 
 @router.post("/logout")
 async def logout(response: Response):
