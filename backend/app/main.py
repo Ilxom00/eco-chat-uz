@@ -46,6 +46,16 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Database tables ready")
     except Exception as e:
         logger.error("❌ Database init failed: {}", e)
+        is_prod = (
+            os.getenv("APP_ENV") == "production" or 
+            os.getenv("ENVIRONMENT") == "production" or
+            (hasattr(settings, "environment") and settings.environment == "production")
+        )
+        if is_prod:
+            logger.critical("Production PostgreSQL unavailable. Startup aborted to protect persistent data.")
+            import sys
+            sys.exit(1)
+
 
     # Auto restore employee & attempt data if DB was reset
     try:
