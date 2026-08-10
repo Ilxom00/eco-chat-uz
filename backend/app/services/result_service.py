@@ -167,18 +167,21 @@ async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: in
 
                 # Get attempt 1 and 2 scores
                 attempts = await db.execute(text("""
-                    SELECT attempt_number, score, status
+                    SELECT id, attempt_number, score, status
                     FROM test_attempts
                     WHERE employee_id = :eid AND topic_id = :tid
                     ORDER BY attempt_number
                 """), {"eid": emp_id, "tid": topic_id})
                 att_rows = attempts.fetchall()
 
-                att1 = next((r for r in att_rows if r[0] == 1), None)
-                att2 = next((r for r in att_rows if r[0] == 2), None)
+                att1 = next((r for r in att_rows if r[1] == 1), None)
+                att2 = next((r for r in att_rows if r[1] == 2), None)
 
-                s1_raw = att1[1] if att1 else None
-                s2_raw = att2[1] if att2 else None
+                att1_id = str(att1[0]) if att1 else None
+                att2_id = str(att2[0]) if att2 else None
+
+                s1_raw = att1[2] if att1 else None
+                s2_raw = att2[2] if att2 else None
 
                 # Convert raw score (0-15) to percentage (0-100)
                 s1 = round(s1_raw / 15 * 100) if s1_raw is not None else None
@@ -191,20 +194,23 @@ async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: in
                     scores2.append(s2)
 
                 # Status
-                if att2 and att2[2] == "COMPLETED":
+                if att2 and att2[3] == "COMPLETED":
                     holat = "Тугатган"
-                elif att1 and att1[2] == "COMPLETED":
+                elif att1 and att1[3] == "COMPLETED":
                     holat = "1-уринди"
-                elif att1 and att1[2] == "IN_PROGRESS":
+                elif att1 and att1[3] == "IN_PROGRESS":
                     holat = "Жараёнда"
                 else:
                     holat = "—"
 
                 topic_results.append({
                     "num": topic[3],
+                    "topic_id": topic_id,
                     "short_name": topic[1],
                     "attempt1": s1,
+                    "attempt1_id": att1_id,
                     "attempt2": s2,
+                    "attempt2_id": att2_id,
                     "diff": diff,
                     "holat": holat,
                 })
@@ -231,6 +237,125 @@ async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: in
     except Exception as e:
         logger.error("Error fetching dashboard employee table: %s", e, exc_info=True)
         return [], 0
+
+
+async def get_attempt_detail_for_dashboard(db: AsyncSession, attempt_id: str) -> dict:
+    """
+    Get detailed 15 questions and answers analysis for an attempt.
+    """
+    import json
+    try:
+        attempt_res = await db.execute(text("""
+            SELECT ta.id, ta.employee_id, ta.topic_id, ta.attempt_number, ta.score, ta.status, 
+                   ta.started_at, ta.completed_at,
+                   e.full_name, COALESCE(b.name, '—') as branch_name,
+                   t.short_name, t.full_name as topic_full_name
+            FROM test_attempts ta
+            JOIN employees e ON ta.employee_id = e.id
+            LEFT JOIN branches b ON e.branch_id = b.id
+            JOIN topics t ON ta.topic_id = t.id
+            WHERE ta.id = :aid
+        """), {"aid": attempt_id})
+        att = attempt_res.fetchone()
+        if not att:
+            return {}
+
+        # Calculate duration
+        started_at = att[6]
+        completed_at = att[7]
+        duration_str = "—"
+        if started_at and completed_at:
+            secs = int((completed_at - started_at).total_seconds())
+            mins = secs // 60
+            rem_secs = secs % 60
+            if mins > 0:
+                duration_str = f"{mins} дақиқа {rem_secs} сония"
+            else:
+                duration_str = f"{rem_secs} сония"
+
+        # Get attempt questions ordered by display_order
+        aq_res = await db.execute(text("""
+            SELECT aq.display_order, aq.answer_display_order, aq.selected_answer_id, 
+                   aq.is_correct, aq.response_time_ms, aq.answer_status,
+                   etq.question_text_snapshot, etq.answers_snapshot, etq.correct_answer_id
+            FROM attempt_questions aq
+            JOIN employee_topic_questions etq ON aq.assignment_question_id = etq.id
+            WHERE aq.attempt_id = :aid
+            ORDER BY aq.display_order ASC
+        """), {"aid": attempt_id})
+        aq_rows = aq_res.fetchall()
+
+        questions = []
+        for r in aq_rows:
+            disp_order = r[0]
+            answer_disp = r[1]
+            if isinstance(answer_disp, str):
+                try:
+                    answer_disp = json.loads(answer_disp)
+                except Exception:
+                    answer_disp = []
+
+            sel_ans_id = r[2]
+            is_corr = r[3]
+            resp_ms = r[4]
+            ans_status = r[5]
+            q_text = r[6]
+            answers_snap = r[7]
+            if isinstance(answers_snap, str):
+                try:
+                    answers_snap = json.loads(answers_snap)
+                except Exception:
+                    answers_snap = []
+
+            correct_ans_id = r[8]
+
+            resp_sec = round(resp_ms / 1000) if resp_ms else 0
+
+            # Build options list using answer_display_order if available, otherwise answers_snap
+            options = []
+            source_answers = answer_disp if answer_disp else answers_snap
+            labels = ['А', 'Б', 'В', 'Г']
+            for idx, ans in enumerate(source_answers):
+                ans_id = ans.get("id")
+                lbl = ans.get("display_label") or ans.get("label") or (labels[idx] if idx < len(labels) else str(idx+1))
+                txt = ans.get("text") or ""
+                
+                options.append({
+                    "id": ans_id,
+                    "label": lbl,
+                    "text": txt,
+                    "is_selected": (ans_id == sel_ans_id),
+                    "is_correct": (ans_id == correct_ans_id),
+                })
+
+            questions.append({
+                "display_order": disp_order,
+                "question_text": q_text,
+                "answer_status": ans_status,
+                "is_correct": is_corr,
+                "response_time_sec": resp_sec,
+                "options": options,
+            })
+
+        raw_score = att[4] or 0
+        pct = round(raw_score / 15 * 100)
+
+        return {
+            "attempt_id": str(att[0]),
+            "employee_name": att[8],
+            "branch_name": att[9],
+            "topic_name": f"{att[10]} — {att[11]}",
+            "attempt_number": att[3],
+            "score": raw_score,
+            "percentage": pct,
+            "status": att[5],
+            "duration": duration_str,
+            "questions": questions,
+        }
+    except Exception as e:
+        logger.error("Error fetching attempt detail for %s: %s", attempt_id, e, exc_info=True)
+        return {}
+
 
 
 async def get_general_stats_for_report(db: AsyncSession, filters: dict) -> list[dict]:
