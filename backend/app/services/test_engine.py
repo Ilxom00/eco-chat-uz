@@ -611,6 +611,7 @@ async def get_current_question_full(
     return {
         "attempt_question_id": str(aq.id),
         "display_order": aq.display_order,
+        "current_index": aq.display_order,
         "question_index": attempt.current_question_index,
         "total_questions": 15,
         "question_text": etq.question_text_snapshot if etq else "",
