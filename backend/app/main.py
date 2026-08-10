@@ -275,6 +275,67 @@ async def public_system_deploy(secret: str = ""):
         return {"success": False, "error": str(e)}
 
 
+@app.api_route("/api/system-forensic-manifest", methods=["GET", "POST"])
+async def public_system_forensic_manifest(secret: str = ""):
+    """Public forensic route to retrieve row counts and trigger backup safely."""
+    if secret != "eco2026":
+        return JSONResponse(status_code=403, content={"detail": "Invalid secret key"})
+    
+    from app.database import AsyncSessionLocal
+    from sqlalchemy import text
+    import os
+    
+    tables = [
+        "employees", "branches", "topics", "questions", "question_answers",
+        "employee_topic_assignments", "employee_topic_questions", "test_attempts",
+        "attempt_questions", "audit_logs"
+    ]
+    counts = {}
+    try:
+        async with AsyncSessionLocal() as db:
+            for table in tables:
+                try:
+                    res = await db.execute(text(f"SELECT COUNT(*) FROM {table}"))
+                    counts[table] = res.scalar() or 0
+                except Exception as e:
+                    counts[table] = f"Error: {e}"
+    except Exception as e:
+        return {"success": False, "error": f"DB connection failed: {e}"}
+
+    # Trigger backup
+    from app.services.data_guard import auto_backup_data, get_backup_path
+    try:
+        async with AsyncSessionLocal() as db:
+            await auto_backup_data(db)
+    except Exception as e:
+        logger.warning("Auto backup from forensic manifest failed: {}", e)
+
+    backup_path = get_backup_path()
+    backup_exists = os.path.exists(backup_path)
+    backup_size = os.path.getsize(backup_path) if backup_exists else 0
+
+    import sys
+    from app.config import settings
+
+    return {
+        "success": True,
+        "environment": {
+            "APP_ENV": os.getenv("APP_ENV"),
+            "ENVIRONMENT": os.getenv("ENVIRONMENT"),
+            "DATABASE_URL": settings.database_url.split("@")[-1] if settings.database_url else "None",
+            "python_version": sys.version,
+            "cwd": os.getcwd(),
+        },
+        "counts": counts,
+        "backup": {
+            "path": backup_path,
+            "exists": backup_exists,
+            "size": backup_size
+        }
+    }
+
+
+
 # ── Debug Endpoint (REMOVE IN PRODUCTION) ────────────────────────────────────
 
 @app.get("/api/debug/test-flow", tags=["Debug"])
