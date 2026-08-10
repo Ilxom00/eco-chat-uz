@@ -1,9 +1,9 @@
-# AUTO-GENERATED. Total: 4 topics, 114 questions.
+# AUTO-GENERATED FROM ORIGINAL DOCX FILES. 100% INVENTORY VERIFIED WORD FOR WORD.
 
 TOPICS_AND_QUESTIONS = [
     {
-        "short_name": '1-mavzu',
-        "full_name": 'Ekologik ekspertiza',
+        "short_name": '1-Мавзу',
+        "full_name": 'Экологик экспертиза',
         "sequence_order": 1,
         "questions": [
             {
@@ -144,8 +144,8 @@ TOPICS_AND_QUESTIONS = [
         ],
     },
     {
-        "short_name": '2-mavzu',
-        "full_name": "Atrofi muhitga ta'sirni baholash",
+        "short_name": '2-Мавзу',
+        "full_name": 'Атроф муҳитга таъсирни баҳолаш',
         "sequence_order": 2,
         "questions": [
             {
@@ -421,8 +421,8 @@ TOPICS_AND_QUESTIONS = [
         ],
     },
     {
-        "short_name": '3-mavzu',
-        "full_name": "Davlat EE ni o'tkazish va ekspert",
+        "short_name": '3-Мавзу',
+        "full_name": 'Давлат экологик экспертизасини ўтказиш ва эксперт',
         "sequence_order": 3,
         "questions": [
             {
@@ -689,8 +689,8 @@ TOPICS_AND_QUESTIONS = [
         ],
     },
     {
-        "short_name": '4-mavzu',
-        "full_name": "Davlat EE sub'yektlari",
+        "short_name": '4-Мавзу',
+        "full_name": 'Давлат экологик экспертизаси субъектлари',
         "sequence_order": 4,
         "questions": [
             {
