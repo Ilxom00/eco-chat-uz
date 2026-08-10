@@ -159,7 +159,7 @@
     <script src="js/audit.js"></script>
     
     <script>
-        // Simple router
+        // Simple router with auto init() triggers
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -168,8 +168,17 @@
                 
                 item.classList.add('active');
                 const target = item.getAttribute('data-target');
-                document.getElementById(target).style.display = 'block';
-                document.getElementById('pageTitle').textContent = item.textContent.replace(/[^\А-Яа-яA-Za-z\s]/g, '').trim();
+                const secEl = document.getElementById(target);
+                if (secEl) secEl.style.display = 'block';
+
+                const titleText = item.textContent.replace(/[^\А-Яа-яA-Za-z\s]/g, '').trim();
+                document.getElementById('pageTitle').textContent = titleText || 'Бошқарув панели';
+
+                if (target === 'topics' && typeof Topics !== 'undefined') Topics.init();
+                if (target === 'dashboard' && typeof Dashboard !== 'undefined') Dashboard.init();
+                if (target === 'branches' && typeof Branches !== 'undefined') Branches.init();
+                if (target === 'reports' && typeof Reports !== 'undefined') Reports.init();
+                if (target === 'audit' && typeof Audit !== 'undefined') Audit.init();
             });
         });
     </script>
