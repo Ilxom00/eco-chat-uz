@@ -981,7 +981,14 @@ async def _complete_attempt(db: AsyncSession, attempt: TestAttempt) -> None:
             assignment.status = "COMPLETED"
             assignment.completed_at = now
 
+    try:
+        from app.services.data_guard import auto_backup_data
+        await auto_backup_data(db)
+    except Exception as ex:
+        logger.debug("Auto backup after test completion error: %s", ex)
+
     # Broadcast SSE event
+
     try:
         from app.services.sse_service import broadcaster
         await broadcaster.broadcast(
