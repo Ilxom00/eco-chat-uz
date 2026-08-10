@@ -29,5 +29,5 @@ class QuestionAnswer(BaseModel):
     __table_args__ = (
         CheckConstraint(option_label.in_(['A', 'B', 'C', 'D']), name='check_option_label'),
         CheckConstraint(sort_order.in_([1, 2, 3, 4]), name='check_sort_order'),
-        Index('ix_question_answer_correct', 'question_id', unique=True, postgresql_where=(is_correct == True)),
+        Index('ix_question_answer_question_id', 'question_id', unique=False),
     )
