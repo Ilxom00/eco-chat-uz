@@ -41,7 +41,12 @@ def _build_msg(qdata: dict, remaining: int) -> str:
     empty = total_blocks - filled
     bar = "🟩" * filled + "⬜" * empty
 
+    topic_name = qdata.get("topic_name", "Мавзу")
+    attempt_num = qdata.get("attempt_number", 1)
+
     return (
+        f"📚 <b>{topic_name}</b>\n"
+        f"🔁 <b>{attempt_num}-уриниш</b>\n\n"
         f"📝 <b>Савол {current} / 15:</b>\n\n"
         f"{q_text}\n\n"
         f"━━━━━━━━━━━━\n"
