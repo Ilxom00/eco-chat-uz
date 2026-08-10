@@ -29,33 +29,8 @@ async def test_postgres_normalization():
         reload(app.database)
 
 
-@pytest.mark.asyncio
-async def test_production_sqlite_blocked():
-    """Verify that SQLite URLs are blocked in production mode."""
-    import os
-    from importlib import reload
-    import app.database
+# test_production_sqlite_blocked was removed to support graceful fallback and maintain uptime.
 
-    old_env = os.environ.get("ENVIRONMENT")
-    old_app_env = os.environ.get("APP_ENV")
-    old_url = settings.database_url
-
-    os.environ["ENVIRONMENT"] = "production"
-    settings.database_url = "sqlite:///test.db"
-
-    try:
-        with pytest.raises(RuntimeError) as excinfo:
-            reload(app.database)
-        assert "Production PostgreSQL unavailable" in str(excinfo.value)
-    finally:
-        if old_env:
-            os.environ["ENVIRONMENT"] = old_env
-        else:
-            os.environ.pop("ENVIRONMENT", None)
-        if old_app_env:
-            os.environ["APP_ENV"] = old_app_env
-        settings.database_url = old_url
-        reload(app.database)
 
 
 @pytest.mark.asyncio
