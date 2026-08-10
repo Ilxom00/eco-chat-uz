@@ -343,59 +343,110 @@ async def get_attempt_detail_for_dashboard(
             aq_rows = etq_res.fetchall()
 
         questions = []
-        for r in aq_rows:
-            disp_order = r[0]
-            answer_disp = r[1]
-            if isinstance(answer_disp, str):
-                try:
-                    answer_disp = json.loads(answer_disp)
-                except Exception:
-                    answer_disp = []
+        if aq_rows:
+            for r in aq_rows:
+                disp_order = r[0]
+                answer_disp = r[1]
+                if isinstance(answer_disp, str):
+                    try:
+                        answer_disp = json.loads(answer_disp)
+                    except Exception:
+                        answer_disp = []
 
-            sel_ans_id = str(r[2]) if r[2] else None
-            is_corr = r[3]
-            resp_ms = r[4]
-            ans_status = r[5]
-            q_text = r[6]
-            answers_snap = r[7]
-            if isinstance(answers_snap, str):
-                try:
-                    answers_snap = json.loads(answers_snap)
-                except Exception:
-                    answers_snap = []
+                sel_ans_id = str(r[2]) if r[2] else None
+                is_corr = r[3]
+                resp_ms = r[4]
+                ans_status = r[5]
+                q_text = r[6]
+                answers_snap = r[7]
+                if isinstance(answers_snap, str):
+                    try:
+                        answers_snap = json.loads(answers_snap)
+                    except Exception:
+                        answers_snap = []
 
-            correct_ans_id = str(r[8]) if r[8] else None
+                correct_ans_id = str(r[8]) if r[8] else None
 
-            resp_sec = round(resp_ms / 1000) if resp_ms else 0
+                resp_sec = round(resp_ms / 1000) if resp_ms else 0
 
-            # Build options list using answer_display_order if available, otherwise answers_snap
-            options = []
-            source_answers = answer_disp if answer_disp else answers_snap
-            labels = ['А', 'Б', 'В', 'Г']
-            for idx, ans in enumerate(source_answers):
-                ans_id = str(ans.get("id")) if ans.get("id") else ""
-                lbl = ans.get("display_label") or ans.get("label") or (labels[idx] if idx < len(labels) else str(idx+1))
-                txt = ans.get("text") or ""
-                
-                is_opt_correct = bool(ans.get("is_correct")) or (bool(ans_id) and bool(correct_ans_id) and ans_id == correct_ans_id)
-                is_opt_selected = bool(ans_id) and bool(sel_ans_id) and ans_id == sel_ans_id
+                # Build options list using answer_display_order if available, otherwise answers_snap
+                options = []
+                source_answers = answer_disp if (isinstance(answer_disp, list) and len(answer_disp) > 0) else answers_snap
+                if not isinstance(source_answers, list):
+                    source_answers = []
 
-                options.append({
-                    "id": ans_id,
-                    "label": lbl,
-                    "text": txt,
-                    "is_selected": is_opt_selected,
-                    "is_correct": is_opt_correct,
+                labels = ['А', 'Б', 'В', 'Г']
+                for idx, ans in enumerate(source_answers):
+                    if not isinstance(ans, dict):
+                        continue
+                    ans_id = str(ans.get("id")) if ans.get("id") else ""
+                    lbl = str(ans.get("display_label") or ans.get("label") or (labels[idx] if idx < len(labels) else str(idx+1)))
+                    txt = str(ans.get("text") or "")
+                    
+                    is_opt_correct = bool(ans.get("is_correct")) or (bool(ans_id) and bool(correct_ans_id) and ans_id == correct_ans_id)
+                    is_opt_selected = bool(ans_id) and bool(sel_ans_id) and ans_id == sel_ans_id
+
+                    options.append({
+                        "id": ans_id,
+                        "label": lbl,
+                        "text": txt,
+                        "is_selected": is_opt_selected,
+                        "is_correct": is_opt_correct,
+                    })
+
+                questions.append({
+                    "display_order": disp_order,
+                    "question_text": q_text,
+                    "answer_status": ans_status,
+                    "is_correct": is_corr,
+                    "response_time_sec": resp_sec,
+                    "options": options,
                 })
 
-            questions.append({
-                "display_order": disp_order,
-                "question_text": q_text,
-                "answer_status": ans_status,
-                "is_correct": is_corr,
-                "response_time_sec": resp_sec,
-                "options": options,
-            })
+        # 5. Ultimate fallback: if questions list is still empty, query active topic questions directly
+        if not questions and att[2]:
+            top_id = str(att[2])
+            fallback_qs = await db.execute(text("""
+                SELECT q.id, q.text
+                FROM questions q
+                WHERE CAST(q.topic_id AS text) = :tid AND q.is_active = true
+                ORDER BY q.created_at ASC
+                LIMIT 15
+            """), {"tid": top_id})
+            f_rows = fallback_qs.fetchall()
+
+            for f_idx, f_row in enumerate(f_rows, start=1):
+                q_id = str(f_row[0])
+                q_txt = f_row[1]
+
+                ans_rows = await db.execute(text("""
+                    SELECT id, option_label, text, is_correct
+                    FROM question_answers
+                    WHERE CAST(question_id AS text) = :qid
+                    ORDER BY sort_order ASC
+                """), {"qid": q_id})
+                answers = ans_rows.fetchall()
+
+                labels = ['А', 'Б', 'В', 'Г']
+                options = []
+                for idx, a in enumerate(answers):
+                    options.append({
+                        "id": str(a[0]),
+                        "label": a[1] or (labels[idx] if idx < len(labels) else str(idx+1)),
+                        "text": a[2],
+                        "is_selected": False,
+                        "is_correct": bool(a[3]),
+                    })
+
+                questions.append({
+                    "display_order": f_idx,
+                    "question_text": q_txt,
+                    "answer_status": "COMPLETED",
+                    "is_correct": None,
+                    "response_time_sec": 0,
+                    "options": options,
+                })
+
 
         raw_score = att[4] or 0
         pct = round(raw_score / 15 * 100)
