@@ -100,23 +100,35 @@ async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: in
     Returns employees with per-topic test scores for the rating table.
     """
     try:
-        # Count total employees
-        total_result = await db.execute(text("SELECT COUNT(*) FROM employees"))
-        total = total_result.scalar() or 0
+        search = (filters.get("search") or "").strip()
+        where_clause = "WHERE (e.registration_state = 'REGISTERED' OR (e.full_name IS NOT NULL AND e.full_name != 'Unknown'))"
+        params = {"limit": page_size, "offset": (page - 1) * page_size}
+
+        if search:
+            where_clause += " AND (e.full_name ILIKE :search OR b.name ILIKE :search)"
+            params["search"] = f"%{search}%"
+
+        # Count total matching employees
+        total_sql = f"""
+            SELECT COUNT(*) FROM employees e
+            LEFT JOIN branches b ON e.branch_id = b.id
+            {where_clause}
+        """
+        total = (await db.execute(text(total_sql), params)).scalar() or 0
 
         if total == 0:
             return [], 0
 
-        offset = (page - 1) * page_size
-
-        # Get employees with branch names, paginated
-        emp_rows = await db.execute(text("""
+        # Get employees
+        emp_sql = f"""
             SELECT e.id, e.full_name, COALESCE(b.name, '—') as branch_name
             FROM employees e
             LEFT JOIN branches b ON e.branch_id = b.id
-            ORDER BY e.full_name
+            {where_clause}
+            ORDER BY e.created_at DESC, e.full_name ASC
             LIMIT :limit OFFSET :offset
-        """), {"limit": page_size, "offset": offset})
+        """
+        emp_rows = await db.execute(text(emp_sql), params)
         employees = emp_rows.fetchall()
 
         # Get all active topics in order
