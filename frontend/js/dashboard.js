@@ -37,9 +37,9 @@ const Dashboard = {
                 return;
             }
             tbody.innerHTML = data.items.map((emp, idx) => `
-                <tr onclick="Employees.showDetail(${emp.id})">
+                <tr id="emp-row-${emp.id}">
                     <td>${(page-1)*10 + idx + 1}</td>
-                    <td>${emp.name}</td>
+                    <td style="cursor:pointer;font-weight:500;" onclick="Employees.showDetail('${emp.id}')">${emp.name}</td>
                     <td>${emp.branch}</td>
                     <td>${emp.topic}</td>
                     <td>${emp.attempt1}%</td>
@@ -49,6 +49,13 @@ const Dashboard = {
                         <span class="badge ${emp.status === 'completed' ? 'badge-success' : 'badge-warning'}">
                             ${emp.status === 'completed' ? 'Тугатган' : 'Жараёнда'}
                         </span>
+                    </td>
+                    <td>
+                        <button
+                            onclick="Dashboard.confirmDeleteEmployee('${emp.id}', '${(emp.name||'').replace(/'/g,"\\'")}')"
+                            style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:white;border:none;border-radius:7px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.2s;"
+                            onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"
+                        >🗑️</button>
                     </td>
                 </tr>
             `).join('');
@@ -79,6 +86,52 @@ const Dashboard = {
             clearTimeout(timeout);
             timeout = setTimeout(later, wait);
         };
+    },
+
+    confirmDeleteEmployee(empId, empName) {
+        const existing = document.getElementById('deleteEmpModal');
+        if (existing) existing.remove();
+        const modal = document.createElement('div');
+        modal.id = 'deleteEmpModal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;';
+        modal.innerHTML = `
+            <div style="background:var(--bg-card,#fff);border-radius:16px;padding:32px;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                <div style="text-align:center;margin-bottom:20px;">
+                    <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+                    <h2 style="margin:0 0 8px 0;color:var(--danger,#dc2626);">Xodimni o'chirish</h2>
+                    <p style="color:var(--text-secondary);margin:0;font-size:15px;">
+                        <strong>${empName}</strong> xodimini o'chirasizmi?<br>
+                        <span style="color:var(--danger,#dc2626);font-weight:600;">Barcha test natijalari va tarix ham o'chadi!</span>
+                    </p>
+                </div>
+                <div style="display:flex;gap:12px;justify-content:center;">
+                    <button onclick="document.getElementById('deleteEmpModal').remove()" style="padding:12px 24px;border-radius:8px;border:2px solid var(--border,#e5e7eb);background:transparent;cursor:pointer;font-size:15px;font-weight:600;">Bekor</button>
+                    <button id="confirmEmpDeleteBtn" onclick="Dashboard.executeDeleteEmployee('${empId}')" style="padding:12px 24px;border-radius:8px;border:none;background:linear-gradient(135deg,#dc2626,#b91c1c);color:white;cursor:pointer;font-size:15px;font-weight:600;">🗑️ Ha, o'chirish</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    },
+
+    async executeDeleteEmployee(empId) {
+        const btn = document.getElementById('confirmEmpDeleteBtn');
+        if (btn) { btn.textContent = "O'chirilmoqda..."; btn.disabled = true; }
+        try {
+            await API.deleteEmployee(empId);
+            document.getElementById('deleteEmpModal')?.remove();
+            const row = document.getElementById('emp-row-' + empId);
+            if (row) row.remove();
+            // Show toast
+            const t = document.createElement('div');
+            t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;padding:14px 20px;border-radius:12px;font-weight:600;background:#16a34a;color:white;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,0.2);';
+            t.textContent = "✅ Xodim o'chirildi!";
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        } catch (e) {
+            document.getElementById('deleteEmpModal')?.remove();
+            alert('Xato: ' + e.message);
+        }
     }
 };
 
