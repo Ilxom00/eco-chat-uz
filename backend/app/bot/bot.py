@@ -56,21 +56,13 @@ async def create_application() -> Application:
         ],
         states={
             # ─ Registration ─────────────────────────────────
+            ASK_BRANCH: [
+                CallbackQueryHandler(registration.handle_branch, pattern=r"^branch:"),
+            ],
             ASK_FULLNAME: [
                 MessageHandler(
                     filters.TEXT & ~filters.COMMAND,
                     registration.handle_fullname,
-                ),
-            ],
-            ASK_BRANCH: [
-                CallbackQueryHandler(registration.handle_branch, pattern=r"^branch:"),
-            ],
-            ASK_PHONE: [
-                MessageHandler(filters.CONTACT, registration.handle_phone),
-                # If user types instead of sharing contact
-                MessageHandler(
-                    filters.TEXT & ~filters.COMMAND,
-                    registration.remind_share_contact,
                 ),
             ],
 
