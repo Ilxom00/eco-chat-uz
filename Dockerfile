@@ -24,5 +24,5 @@ WORKDIR /app/backend
 # Expose port
 EXPOSE $PORT
 
-# Start command: try to create admin, then always start server
-CMD python scripts/create_superadmin.py; uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# ONE-TIME RESET: clear test data, then start normally
+CMD python scripts/reset_test_data.py; python scripts/create_superadmin.py; uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
