@@ -318,12 +318,12 @@ async def can_start_attempt(
         now = _utc_now()
 
         if now < earliest_start:
-            # DO NOT reveal the 10-minute rule to the user
-            return False, "NOT_YET_READY"
+            remaining = int((earliest_start - now).total_seconds())
+            return False, f"NOT_YET_READY:{remaining}"
 
-        # Seminar confirmation required
-        if not assignment.seminar_confirmed:
-            return False, "SEMINAR_NOT_CONFIRMED"
+        # Seminar confirmation required - Bypassed as per user request to unlock purely based on 10-minute timer
+        # if not assignment.seminar_confirmed:
+        #     return False, "SEMINAR_NOT_CONFIRMED"
 
     return True, "OK"
 
