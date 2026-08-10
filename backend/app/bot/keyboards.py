@@ -3,14 +3,10 @@ from . import messages
 
 def get_branch_keyboard(branches: list) -> InlineKeyboardMarkup:
     keyboard = []
-    row = []
     for branch in branches:
-        row.append(InlineKeyboardButton(branch['name'], callback_data=f"branch:{branch['id']}"))
-        if len(row) == 2:
-            keyboard.append(row)
-            row = []
-    if row:
-        keyboard.append(row)
+        keyboard.append([
+            InlineKeyboardButton(branch['name'], callback_data=f"branch:{branch['id']}")
+        ])
     return InlineKeyboardMarkup(keyboard)
 
 def get_phone_keyboard() -> ReplyKeyboardMarkup:
