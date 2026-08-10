@@ -1,78 +1,30 @@
 """
-eco-chat.uz — Cloud DataGuard Persistence Engine
-Uses GitHub API to store database state directly in the private repository.
-Prevents any data loss across container recreations, server resets, or re-deploys.
+eco-chat.uz — Persistent DataGuard Engine
+Writes the database backup directly to the persistent host volume /backups/db_backup.json.
+This volume is mapped to /opt/ecochat-data/backups on the host SSD, ensuring 100% persistence.
 """
 import json
 import os
-import base64
-import urllib.request
 from datetime import datetime
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
-# Paths resolving to the app folder
-BACKUP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOCAL_BACKUP = os.path.join(BACKUP_DIR, "db_backup.json")
+# Absolute path on the persistent volume
+PERSISTENT_BACKUP_PATH = "/backups/db_backup.json"
+LOCAL_FALLBACK_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "db_backup.json")
 
 
-async def push_backup_to_github(data_dict: dict):
-    """
-    Commit and push db_backup.json directly to GitHub repository.
-    """
-    # Obfuscated to bypass GitHub secret scanner
-    p1 = "ghp_"
-    p2 = "NXpe2snmfsB8LOSCoMstGhh2NfssDC2s1ag0"
-    token = p1 + p2
-
-    owner = "Ilxom00"
-    repo = "eco-chat-uz"
-    path = "backend/app/db_backup.json"
-    
-    url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github.v3+json",
-        "User-Agent": "eco-chat-backup"
-    }
-    
-    try:
-        # Get existing file SHA if it exists
-        req = urllib.request.Request(url, headers=headers)
-        sha = None
-        try:
-            with urllib.request.urlopen(req, timeout=5) as response:
-                res_data = json.loads(response.read().decode())
-                sha = res_data.get("sha")
-        except Exception:
-            pass # File doesn't exist yet
-            
-        content_bytes = json.dumps(data_dict, ensure_ascii=False, indent=2).encode("utf-8")
-        content_b64 = base64.b64encode(content_bytes).decode("utf-8")
-        
-        body = {
-            "message": "DataGuard: Automatic cloud database state backup",
-            "content": content_b64
-        }
-        if sha:
-            body["sha"] = sha
-            
-        req_put = urllib.request.Request(
-            url, 
-            data=json.dumps(body).encode("utf-8"), 
-            headers={**headers, "Content-Type": "application/json"},
-            method="PUT"
-        )
-        with urllib.request.urlopen(req_put, timeout=8) as response:
-            logger.info("✅ DataGuard: Successfully pushed state backup to GitHub cloud!")
-    except Exception as e:
-        logger.warning("DataGuard GitHub push failed: %s", e)
+def get_backup_path() -> str:
+    """Returns the most appropriate persistent backup path."""
+    if os.path.exists("/backups") or os.path.exists(os.path.dirname(PERSISTENT_BACKUP_PATH)):
+        return PERSISTENT_BACKUP_PATH
+    return LOCAL_FALLBACK_PATH
 
 
 async def auto_backup_data(db: AsyncSession):
     """
-    Export all employees, assignments, and test_attempts into persistent JSON backup and sync to GitHub.
+    Export all employees, assignments, and test_attempts into persistent JSON backup on host SSD.
     """
     try:
         # 1. Get employees
@@ -109,25 +61,20 @@ async def auto_backup_data(db: AsyncSession):
             "assignments": assignments,
         }
 
-        # Write locally
-        try:
-            with open(LOCAL_BACKUP, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception as ex:
-            logger.debug("Local backup write error: %s", ex)
+        # Write to persistent volume
+        target_path = get_backup_path()
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+        with open(target_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
 
-        # Sync to GitHub Cloud
-        import asyncio
-        asyncio.create_task(push_backup_to_github(data))
-
-        logger.info("✅ DataGuard: backed up %d employees & %d attempts", len(employees), len(attempts))
+        logger.info("💾 DataGuard: successfully backed up %d employees & %d attempts to %s", len(employees), len(attempts), target_path)
     except Exception as e:
         logger.warning("DataGuard auto_backup error: %s", e)
 
 
 async def auto_restore_if_empty(db: AsyncSession):
     """
-    If employees table is empty on startup, auto-restore from backup JSON.
+    If employees table is empty on startup, auto-restore from persistent backup JSON.
     """
     try:
         emp_cnt = (await db.execute(text("SELECT COUNT(*) FROM employees"))).scalar() or 0
@@ -136,10 +83,14 @@ async def auto_restore_if_empty(db: AsyncSession):
             await auto_backup_data(db)
             return
 
-        target_path = LOCAL_BACKUP
+        target_path = get_backup_path()
         if not os.path.exists(target_path) or os.path.getsize(target_path) < 10:
-            logger.info("ℹ️ DataGuard: No backup JSON found yet at %s", target_path)
-            return
+            # Check fallback path
+            if target_path == PERSISTENT_BACKUP_PATH and os.path.exists(LOCAL_FALLBACK_PATH) and os.path.getsize(LOCAL_FALLBACK_PATH) >= 10:
+                target_path = LOCAL_FALLBACK_PATH
+            else:
+                logger.info("ℹ️ DataGuard: No backup JSON found at %s", target_path)
+                return
 
         with open(target_path, "r", encoding="utf-8") as f:
             data = json.load(f)
