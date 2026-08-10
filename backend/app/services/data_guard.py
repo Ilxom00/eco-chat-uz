@@ -77,11 +77,30 @@ async def auto_restore_if_empty(db: AsyncSession):
     If employees table is empty on startup, auto-restore from persistent backup JSON.
     """
     try:
+        # Environment Guard
+        is_prod = (
+            os.getenv("APP_ENV") == "production" or 
+            os.getenv("ENVIRONMENT") == "production"
+        )
+
         emp_cnt = (await db.execute(text("SELECT COUNT(*) FROM employees"))).scalar() or 0
         if emp_cnt > 0:
             logger.info("ℹ️ DataGuard: DB has %d employees — backing up latest state.", emp_cnt)
             await auto_backup_data(db)
             return
+
+        # Empty Database Safety Lock
+        topic_cnt = 0
+        try:
+            topic_cnt = (await db.execute(text("SELECT COUNT(*) FROM topics"))).scalar() or 0
+        except Exception:
+            pass
+
+        if is_prod and emp_cnt == 0 and topic_cnt > 0:
+            logger.critical("🚨 CRITICAL: Unexpected empty production database detected. Data Safety Lock triggered!")
+            import sys
+            sys.exit("CRITICAL: Unexpected empty production database detected. Startup aborted to protect persistent data.")
+
 
         target_path = get_backup_path()
         if not os.path.exists(target_path) or os.path.getsize(target_path) < 10:
