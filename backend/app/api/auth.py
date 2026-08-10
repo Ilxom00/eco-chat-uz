@@ -5,7 +5,7 @@ from app.api.deps import get_current_admin
 from app.services.auth_service import authenticate_admin, create_access_token_for_admin
 from app.models.admin import Admin
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(tags=["auth"])
 
 @router.post("/login")
 async def login(response: Response, data: dict, db: AsyncSession = Depends(get_db)):
