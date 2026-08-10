@@ -28,7 +28,7 @@ async def auto_backup_data(db: AsyncSession):
     """
     try:
         # 1. Get employees
-        emp_res = await db.execute(text("SELECT id, telegram_user_id, full_name, phone, branch_id, is_active FROM employees"))
+        emp_res = await db.execute(text("SELECT id, telegram_user_id, full_name, phone, branch_id FROM employees"))
         employees = [dict(r._mapping) for r in emp_res.fetchall()]
         for e in employees:
             e["id"] = str(e["id"])
@@ -126,16 +126,15 @@ async def auto_restore_if_empty(db: AsyncSession):
         # 1. Restore employees
         for e in employees:
             await db.execute(text("""
-                INSERT INTO employees (id, telegram_user_id, full_name, phone, branch_id, is_active)
-                VALUES (:id, :tg_id, :fn, :ph, :bid, :act)
+                INSERT INTO employees (id, telegram_user_id, full_name, phone, branch_id)
+                VALUES (:id, :tg_id, :fn, :ph, :bid)
                 ON CONFLICT (id) DO NOTHING
             """), {
                 "id": str(e["id"]),
                 "tg_id": int(e["telegram_user_id"]),
                 "fn": str(e["full_name"]),
                 "ph": str(e.get("phone", "")),
-                "bid": str(e["branch_id"]) if e.get("branch_id") else None,
-                "act": bool(e.get("is_active", True))
+                "bid": str(e["branch_id"]) if e.get("branch_id") else None
             })
 
         # 2. Restore assignments
