@@ -207,6 +207,33 @@ const Dashboard = {
                 });
             }
 
+            // 2.5 Sort filtered employees based on performance:
+            // - Primary: Average percentage of all completed attempts descending.
+            // - Secondary: Total duration of all completed attempts ascending.
+            filtered.forEach(emp => {
+                let sumPct = 0;
+                let countAttempts = 0;
+                (emp.topics || []).forEach(t => {
+                    if (t.attempt1 !== null && t.attempt1 !== undefined) {
+                        sumPct += t.attempt1;
+                        countAttempts++;
+                    }
+                    if (t.attempt2 !== null && t.attempt2 !== undefined) {
+                        sumPct += t.attempt2;
+                        countAttempts++;
+                    }
+                });
+                emp._avgPct = countAttempts > 0 ? (sumPct / countAttempts) : 0;
+                emp._totalDuration = emp.total_duration_sec || 0;
+            });
+
+            filtered.sort((a, b) => {
+                if (b._avgPct !== a._avgPct) {
+                    return b._avgPct - a._avgPct;
+                }
+                return a._totalDuration - b._totalDuration;
+            });
+
             const totalCount = filtered.length;
             const topicCount = data.items[0]?.topics?.length || 4;
             const dynColspan = 3 + topicCount * 4 + 3;
