@@ -91,8 +91,15 @@ async def register_employee(
 
     await db.commit()
     await db.refresh(emp)
+    try:
+        from app.services.data_guard import auto_backup_data
+        await auto_backup_data(db)
+    except Exception as ex:
+        logger.debug("Auto backup after register error: %s", ex)
+
     logger.info("Registered employee: %s (TG: %d, branch: %s)", full_name, tg_id, branch_val)
     return emp
+
 
 
 async def update_registration(
