@@ -480,3 +480,6 @@ if os.path.exists(frontend_path):
     app.mount("/static", StaticFiles(directory=frontend_path), name="static-assets")
     # Also serve frontend files at root
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+
+# RESTART TRIGGER: 2026-08-11T04:14:27
+
