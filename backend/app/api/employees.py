@@ -4,7 +4,7 @@ from app.database import get_db
 from app.api.deps import get_current_admin
 from app.services import employee_service
 
-router = APIRouter(prefix="/employees", tags=["employees"], dependencies=[Depends(get_current_admin)])
+router = APIRouter(tags=["employees"], dependencies=[Depends(get_current_admin)])
 
 @router.get("/")
 async def list_employees(page: int = 1, page_size: int = 10, db: AsyncSession = Depends(get_db)):
