@@ -240,9 +240,12 @@ async def start_test(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if "completed first" in str(err).lower():
                 err = "Аввалги мавзуни тугатмасдан кейинги мавзуга ўтиб бўлмайди."
             elif "not_yet_ready" in str(err).lower():
-                # Parse remaining wait seconds
+                # Parse remaining wait seconds safely from the last part of string
                 parts = str(err).split(":")
-                secs = int(parts[1]) if len(parts) > 1 else 600
+                try:
+                    secs = int(parts[-1].strip())
+                except (ValueError, IndexError):
+                    secs = 600
                 mins = secs // 60
                 rem_secs = secs % 60
                 err = f"2-уринишни бошлаш учун 1-уриниш якунланганидан кейин 10 дақиқа кутиш керак. Илтимос, яна {mins} дақиқа {rem_secs} сония кутинг."
