@@ -47,9 +47,10 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         try:
             emp = await bot_api.get_employee_by_telegram_id(user_id)
             if emp and emp.get("full_name"):
+                full_name = emp["full_name"]
                 if msg:
                     await msg.reply_text(
-                        messages.WELCOME_BACK,
+                        f"🌿 Хуш келибсиз! {full_name}\n\nАсосий меню:",
                         reply_markup=get_main_menu_keyboard(),
                     )
                 return MAIN_MENU
