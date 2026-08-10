@@ -57,6 +57,10 @@ async def lifespan(app: FastAPI):
         _admin_pass = _os.getenv("ADMIN_PASSWORD", "12345")
 
         async with engine.begin() as conn:
+            try:
+                await conn.execute(_text("DROP INDEX IF EXISTS ix_question_answer_correct"))
+            except Exception:
+                pass
             row = (await conn.execute(_text("SELECT id FROM admins WHERE username = :u"), {"u": _admin_user})).fetchone()
             if not row:
                 _pwd = _gph(_admin_pass)
