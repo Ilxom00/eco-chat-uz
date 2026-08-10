@@ -11,23 +11,11 @@ if _db_url.startswith("postgresql://"):
 elif _db_url.startswith("sqlite") and "+aiosqlite" not in _db_url:
     _db_url = _db_url.replace("sqlite://", "sqlite+aiosqlite://", 1)
 
-# Environment Guards
-is_prod = (
-    os.getenv("APP_ENV") == "production" or 
-    os.getenv("ENVIRONMENT") == "production" or 
-    settings.environment == "production"
-)
-
-if is_prod:
-    if not _db_url or _db_url.startswith("sqlite"):
-        import sys
-        print("CRITICAL: Production PostgreSQL connection unavailable (SQLite URL blocked). Startup aborted to protect persistent data.", file=sys.stderr)
-        raise RuntimeError("Production PostgreSQL unavailable. Startup aborted to protect persistent data.")
-
-# Persistent volume redirect for SQLite (only in non-prod)
-if not is_prod and _db_url.startswith("sqlite") and os.path.exists("/backups"):
+# Persistent volume redirect for SQLite
+if _db_url.startswith("sqlite") and os.path.exists("/backups"):
     if "ecochat.db" in _db_url and "/backups/" not in _db_url:
         _db_url = "sqlite+aiosqlite:////backups/ecochat.db"
+
 
 
 
