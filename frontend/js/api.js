@@ -46,22 +46,22 @@ const API = {
 
     // Dashboard
     async getDashboardStats() {
-        return this.fetch('/admin/dashboard/stats');
+        return this.fetch('/dashboard/stats');
     },
     async getDashboardEmployees(params) {
         const q = new URLSearchParams(params).toString();
-        return this.fetch(`/admin/dashboard/employees?${q}`);
+        return this.fetch(`/dashboard/employees?${q}`);
     },
     async getEmployeeDetail(id) {
-        return this.fetch(`/admin/employees/${id}`);
+        return this.fetch(`/employees/${id}`);
     },
 
     // Topics
     async getTopics() {
-        return this.fetch('/admin/topics');
+        return this.fetch('/topics');
     },
     async createTopic(data) {
-        return this.fetch('/admin/topics', {
+        return this.fetch('/topics', {
             method: 'POST',
             body: JSON.stringify(data)
         });
@@ -70,24 +70,24 @@ const API = {
     // Questions
     async getQuestions(topicId, params) {
         const q = new URLSearchParams(params).toString();
-        return this.fetch(`/admin/topics/${topicId}/questions?${q}`);
+        return this.fetch(`/topics/${topicId}/questions?${q}`);
     },
 
     // Branches
     async getBranches() {
-        return this.fetch('/admin/branches');
+        return this.fetch('/branches');
     },
 
     // Reports
     async downloadReport(type, params) {
         const q = new URLSearchParams(params).toString();
-        return this.fetch(`/admin/reports/download/${type}?${q}`);
+        return this.fetch(`/reports/download/${type}?${q}`);
     },
 
     // Audit
     async getAuditLogs(params) {
         const q = new URLSearchParams(params).toString();
-        return this.fetch(`/admin/audit?${q}`);
+        return this.fetch(`/audit-logs?${q}`);
     }
 };
 
