@@ -23,13 +23,15 @@ const Employees = {
         // Topic table rows
         const topicRows = (emp.topics || []).map((t, idx) => {
             let s1 = '<span style="color:#9ca3af;">—</span>';
-            if (t.attempt1 !== null && t.attempt1 !== undefined && t.attempt1_id) {
-                s1 = `<button onclick="Employees.showAttemptModal('${t.attempt1_id}')" style="background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;padding:4px 10px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="15 та савол ва жавобларни кўриш учун босинг"><span>${t.attempt1}%</span> <span style="font-size:11px;">🔍</span></button>`;
+            if (t.attempt1 !== null && t.attempt1 !== undefined) {
+                const attId = t.attempt1_id || '';
+                s1 = `<button onclick="Employees.showAttemptModal('${attId}', '${emp.id}', '${t.topic_id || ''}', 1)" style="background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;padding:4px 10px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="15 та савол ва жавобларни кўриш учун босинг"><span>${t.attempt1}%</span> <span style="font-size:11px;">🔍</span></button>`;
             }
 
             let s2 = '<span style="color:#9ca3af;">—</span>';
-            if (t.attempt2 !== null && t.attempt2 !== undefined && t.attempt2_id) {
-                s2 = `<button onclick="Employees.showAttemptModal('${t.attempt2_id}')" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;padding:4px 10px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="15 та савол ва жавобларни кўриш учун босинг"><span>${t.attempt2}%</span> <span style="font-size:11px;">🔍</span></button>`;
+            if (t.attempt2 !== null && t.attempt2 !== undefined) {
+                const attId = t.attempt2_id || '';
+                s2 = `<button onclick="Employees.showAttemptModal('${attId}', '${emp.id}', '${t.topic_id || ''}', 2)" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;padding:4px 10px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="15 та савол ва жавобларни кўриш учун босинг"><span>${t.attempt2}%</span> <span style="font-size:11px;">🔍</span></button>`;
             }
 
             const diff = t.diff !== null && t.diff !== undefined
@@ -141,7 +143,7 @@ const Employees = {
         if (modal) modal.style.display = 'none';
     },
 
-    async showAttemptModal(attemptId) {
+    async showAttemptModal(attemptId, empId, topicId, attemptNum = 1) {
         document.getElementById('attemptDetailModal')?.remove();
         
         const modal = document.createElement('div');
@@ -172,7 +174,13 @@ const Employees = {
         modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 
         try {
-            const data = await API.getAttemptDetail(attemptId);
+            const params = {};
+            if (empId && topicId) {
+                params.emp_id = empId;
+                params.topic_id = topicId;
+                params.attempt_num = attemptNum;
+            }
+            const data = await API.getAttemptDetail(attemptId, params);
             const content = document.getElementById('attemptDetailContent');
             if (!content) return;
 
