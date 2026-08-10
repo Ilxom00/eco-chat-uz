@@ -18,7 +18,23 @@ const Dashboard = {
         if (searchInput) {
             searchInput.addEventListener('input', this.debounce(() => this.loadEmployees(1), 400));
         }
+
+        // Smart auto-refresh every 10 seconds
+        setInterval(() => {
+            const searchVal = document.getElementById('empSearch')?.value || '';
+            const empModal = document.getElementById('employeeModal');
+            const attemptModal = document.getElementById('attemptDetailModal');
+            
+            const isEmpModalOpen = empModal && empModal.style.display === 'flex';
+            const isAttemptModalOpen = !!attemptModal;
+
+            if (!searchVal.trim() && !isEmpModalOpen && !isAttemptModalOpen) {
+                this.loadStats();
+                this.loadEmployees(this.currentPage || 1);
+            }
+        }, 10000);
     },
+
 
     async loadStats() {
         try {
