@@ -201,35 +201,47 @@ async def start_test(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return TOPIC_SELECT
 
     try:
-        attempt_data = await bot_api.start_attempt(user_id, topic_id, 1)
-        err_msg = str(attempt_data.get("error", ""))
+        # 1. Query current topic status for this employee
+        resume_data = await bot_api.get_employee_topic_status(user_id, topic_id)
+        
+        # 2. Check for in-progress attempt first
+        in_progress_id = resume_data.get("in_progress_attempt_id")
+        if in_progress_id:
+            context.user_data["attempt_id"] = in_progress_id
+            res = await bot_api.get_current_question(in_progress_id)
+            qdata = res.get("question")
+            if qdata and qdata.get("question_text"):
+                await show_question(update, context, qdata, in_progress_id)
+                return TEST_IN_PROGRESS
+            results = await bot_api.get_attempt_results(in_progress_id)
+            return await show_attempt_results(update, context, results)
 
-        if "already exists" in err_msg.lower():
-            try:
-                resume_data = await bot_api.get_employee_topic_status(user_id, topic_id)
-                eid = resume_data.get("in_progress_attempt_id") or resume_data.get("attempt1_id")
-                if eid:
-                    context.user_data["attempt_id"] = eid
-                    res = await bot_api.get_current_question(eid)
-                    qdata = res.get("question")
-                    if qdata and qdata.get("question_text"):
-                        await show_question(update, context, qdata, eid)
-                        return TEST_IN_PROGRESS
-                    results = await bot_api.get_attempt_results(eid)
-                    return await show_attempt_results(update, context, results)
-            except Exception as e2:
-                logger.warning("Resume error: %s", e2)
-            txt = "⚠️ Тест аллақачон бошланган."
-            if query:
-                await query.edit_message_text(txt)
+        # 3. Determine attempt number to start
+        attempt_number = 1
+        if resume_data.get("attempt1_id"):
+            if resume_data.get("attempt2_id"):
+                # Both attempts completed, show attempt 2 results
+                results = await bot_api.get_attempt_results(resume_data["attempt2_id"])
+                return await show_attempt_results(update, context, results)
             else:
-                await update.message.reply_text(txt)
-            return TOPIC_SELECT
+                attempt_number = 2
+
+        # 4. Start the attempt
+        attempt_data = await bot_api.start_attempt(user_id, topic_id, attempt_number)
+        err_msg = str(attempt_data.get("error", ""))
 
         if "error" in attempt_data or not attempt_data.get("attempt_id"):
             err = attempt_data.get("error", "Тестни бошлашда хатолик юз берди.")
             if "completed first" in str(err).lower():
                 err = "Аввалги мавзуни тугатмасдан кейинги мавзуга ўтиб бўлмайди."
+            elif "not_yet_ready" in str(err).lower():
+                # Parse remaining wait seconds
+                parts = str(err).split(":")
+                secs = int(parts[1]) if len(parts) > 1 else 600
+                mins = secs // 60
+                rem_secs = secs % 60
+                err = f"2-уринишни бошлаш учун 1-уриниш якунланганидан кейин 10 дақиқа кутиш керак. Илтимос, яна {mins} дақиқа {rem_secs} сония кутинг."
+            
             if query:
                 await query.edit_message_text(f"⚠️ {err}")
             else:
