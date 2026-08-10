@@ -6,7 +6,7 @@ from app.services import branch_service
 
 router = APIRouter(tags=["branches"], dependencies=[Depends(get_current_admin)])
 
-@router.get("/")
+@router.get("")
 async def list_branches(include_archived: bool = False, db: AsyncSession = Depends(get_db)):
     branches = await branch_service.get_all_branches(db, include_archived)
     result = []
