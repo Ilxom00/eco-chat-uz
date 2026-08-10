@@ -71,7 +71,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("❌ Superadmin creation failed: {}", e)
 
-    # Seed branches (official DEE branches of Uzbekistan in Cyrillic)
+    # Seed & Sync branches (official DEE branches of Uzbekistan in Cyrillic)
     try:
         _BRANCHES = [
             "Давлат Экологик экспертизаси маркази (Марказий аппарат)",
@@ -91,17 +91,28 @@ async def lifespan(app: FastAPI):
             "Тошкент шаҳар филиали",
         ]
         async with engine.begin() as conn:
-            existing = (await conn.execute(_text("SELECT COUNT(*) FROM branches"))).scalar() or 0
-            if existing < len(_BRANCHES):
-                await conn.execute(_text("DELETE FROM branches"))
-                for i, bname in enumerate(_BRANCHES, 1):
+            # Upsert all 15 branches by sort_order
+            for i, bname in enumerate(_BRANCHES, 1):
+                existing_id = (await conn.execute(_text("SELECT id FROM branches WHERE sort_order = :s"), {"s": i})).scalar()
+                if existing_id:
+                    await conn.execute(
+                        _text("UPDATE branches SET name = :n, is_active = true WHERE id = :id"),
+                        {"n": bname, "id": existing_id}
+                    )
+                else:
                     await conn.execute(
                         _text("INSERT INTO branches (id, name, sort_order, is_active) VALUES (:id, :n, :s, true)"),
                         {"id": str(_uuid.uuid4()), "n": bname, "s": i}
                     )
-                logger.info("✅ {} ta filial yaratildi", len(_BRANCHES))
-            else:
-                logger.info("✅ Filiallar allaqachon bor ({})", existing)
+
+            # Auto-fix existing employees with NULL branch_id
+            await conn.execute(_text("""
+                UPDATE employees
+                SET branch_id = (SELECT id FROM branches ORDER BY sort_order ASC LIMIT 1)
+                WHERE branch_id IS NULL
+            """))
+
+            logger.info("✅ 15 ta филиал ва ходимлар филиаллари синк қилинди")
     except Exception as e:
         logger.error("❌ Branch seeding failed: {}", e)
 
