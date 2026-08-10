@@ -29,11 +29,13 @@ const Dashboard = {
             const isAttemptModalOpen = !!attemptModal;
 
             if (!searchVal.trim() && !isEmpModalOpen && !isAttemptModalOpen) {
-                this.loadStats();
-                this.loadEmployees(this.currentPage || 1);
+                console.log("Dashboard auto-refresh triggered...");
+                Dashboard.loadStats();
+                Dashboard.loadEmployees(Dashboard.currentPage || 1);
             }
         }, 10000);
     },
+
 
 
     async loadStats() {
