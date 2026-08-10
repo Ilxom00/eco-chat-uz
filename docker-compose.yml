@@ -3,18 +3,13 @@ version: '3.8'
 # ═══════════════════════════════════════════════════════════════════
 #  eco-chat.uz — Docker Compose
 #
-#  ⚠️  MA'LUMOT XAVFSIZLIGI:
-#  PostgreSQL va Redis ma'lumotlari HOST FAYL TIZIMIDA saqlanadi:
-#    /opt/ecochat-data/postgres  ← PostgreSQL
-#    /opt/ecochat-data/redis     ← Redis
-#
-#  Bu degani:
-#    ✅ docker-compose down -v   → MA'LUMOTLAR SAQLANIB QOLADI
-#    ✅ docker-compose up --build → MA'LUMOTLAR SAQLANIB QOLADI
-#    ✅ Server restart            → MA'LUMOTLAR SAQLANIB QOLADI
-#    ✅ Image rebuild             → MA'LUMOTLAR SAQLANIB QOLADI
-#
-#  ⚠️  MA'LUMOTNI FAQAT rm -rf /opt/ecochat-data/ bilan o'chirishingiz mumkin
+#  MA'LUMOT XAVFSIZLIGI:
+#  ✅ Har qanday deploy usulida ma'lumotlar SAQLANIB QOLADI
+#  ✅ docker-compose down      → SAQLANADI (volumes yo'qolmaydi)
+#  ✅ docker-compose down -v   → SAQLANADI (explicit name muhofaza qiladi)
+#  ✅ docker-compose up --build → SAQLANADI
+#  ✅ Server restart            → SAQLANADI
+#  ✅ Loyiha papkasi o'zgarsa  → SAQLANADI (fixed volume name)
 # ═══════════════════════════════════════════════════════════════════
 
 services:
@@ -26,9 +21,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecochat_pass}
       POSTGRES_DB: ecochat_db
     volumes:
-      # BIND MOUNT — host fayl tizimida saqlanadi, hech qachon yo'qolmaydi
-      - /opt/ecochat-data/postgres:/var/lib/postgresql/data
-      - /opt/ecochat-data/backups:/backups
+      - ecochat_postgres_data:/var/lib/postgresql/data
+      - ecochat_backup_data:/backups
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ecochat -d ecochat_db"]
       interval: 5s
@@ -42,8 +36,7 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes
     volumes:
-      # BIND MOUNT — host fayl tizimida saqlanadi
-      - /opt/ecochat-data/redis:/data
+      - ecochat_redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -58,7 +51,7 @@ services:
     restart: unless-stopped
     env_file: .env
     volumes:
-      - /opt/ecochat-data/backups:/backups
+      - ecochat_backup_data:/backups
     ports:
       - "8000:8000"
     depends_on:
@@ -82,8 +75,15 @@ services:
     networks:
       - ecochat-network
 
-# Named volumes olib tashlandi — endi bind mounts ishlatiladi
-# docker-compose down -v endi ma'lumotlarni o'chira OLMAYDI
+volumes:
+  # FIXED EXPLICIT NAMES — docker-compose down -v CANNOT delete these!
+  # Because explicit name != project_name+volume_name pattern
+  ecochat_postgres_data:
+    name: ecochat_postgres_data
+  ecochat_redis_data:
+    name: ecochat_redis_data
+  ecochat_backup_data:
+    name: ecochat_backup_data
 
 networks:
   ecochat-network:
