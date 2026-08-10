@@ -47,6 +47,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("❌ Database init failed: {}", e)
 
+    # Auto restore employee & attempt data if DB was reset
+    try:
+        from app.database import AsyncSessionLocal
+        from app.services.data_guard import auto_restore_if_empty
+        async with AsyncSessionLocal() as _db_guard:
+            await auto_restore_if_empty(_db_guard)
+    except Exception as e:
+        logger.warning("DataGuard startup restore check failed: {}", e)
+
+
     # Auto-backup employee data on every startup (protects against accidental data loss)
     try:
         import subprocess, os
