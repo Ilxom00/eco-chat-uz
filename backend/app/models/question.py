@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, ForeignKey, CheckConstraint, Index
-from sqlalchemy.dialects.postgresql import UUID, CHAR
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from .base import BaseModel
 
@@ -23,11 +23,11 @@ class QuestionAnswer(BaseModel):
     question_id = Column(UUID(as_uuid=True), ForeignKey('questions.id'), nullable=False)
     text = Column(Text, nullable=False)
     is_correct = Column(Boolean, nullable=False, default=False)
-    option_label = Column(CHAR(1), nullable=False)
+    option_label = Column(String(5), nullable=False)
     sort_order = Column(Integer, nullable=False)
     
     __table_args__ = (
-        CheckConstraint(option_label.in_(['A', 'B', 'C', 'D']), name='check_option_label'),
+        CheckConstraint(option_label.in_(['А', 'Б', 'В', 'Г', 'A', 'B', 'C', 'D']), name='check_option_label'),
         CheckConstraint(sort_order.in_([1, 2, 3, 4]), name='check_sort_order'),
         Index('ix_question_answer_question_id', 'question_id', unique=False),
     )
