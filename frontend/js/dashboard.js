@@ -295,8 +295,139 @@ const Dashboard = {
             document.getElementById('deleteEmpModal')?.remove();
             alert('Хатолик: ' + e.message);
         }
+    },
+
+    async exportToExcel() {
+        const btn = event?.target?.closest('button');
+        const origText = btn?.innerHTML || '';
+        if (btn) { btn.innerHTML = '⏳ Юкланмоқда...'; btn.disabled = true; }
+
+        try {
+            // Fetch ALL pages
+            let allItems = [];
+            let page = 1;
+            while (true) {
+                const data = await API.getDashboardEmployees({ page, search: '' });
+                if (!data?.items?.length) break;
+                allItems = allItems.concat(data.items);
+                if (allItems.length >= (data.total || 0)) break;
+                page++;
+            }
+
+            const topicCount = allItems[0]?.topics?.length || 4;
+
+            // Colors matching the dashboard
+            const H_BG = '#15803d';   // dark green header
+            const H_S  = '#22c55e';   // light green subheader
+            const D_BG = '#1e3a5f';   // dark blue total header
+            const D_S  = '#2563eb';   // blue subheader
+            const WHITE = '#ffffff';
+            const STRIPE = '#f0fdf4'; // light green row stripe
+
+            // Build header row 1
+            let hdr1 = `<tr>
+                <th style="background:${H_BG};color:#fff;border:1px solid #166534;padding:10px 8px;font-size:12px;white-space:nowrap;" rowspan="2">№</th>
+                <th style="background:${H_BG};color:#fff;border:1px solid #166534;padding:10px 8px;font-size:12px;white-space:nowrap;min-width:160px;" rowspan="2">Ф.И.Ш.</th>
+                <th style="background:${H_BG};color:#fff;border:1px solid #166534;padding:10px 8px;font-size:12px;white-space:nowrap;min-width:180px;" rowspan="2">Филиал</th>`;
+            for (let i = 1; i <= topicCount; i++) {
+                hdr1 += `<th colspan="4" style="background:${H_BG};color:#fff;border:1px solid #166534;padding:10px 8px;font-size:12px;text-align:center;">${i}-Мавзу</th>`;
+            }
+            hdr1 += `<th colspan="3" style="background:${D_BG};color:#fff;border:1px solid #1e40af;padding:10px 8px;font-size:12px;text-align:center;">Жами якуни</th></tr>`;
+
+            let hdr2 = '<tr>';
+            for (let i = 0; i < topicCount; i++) {
+                hdr2 += `<th style="background:${H_S};color:#fff;border:1px solid #166534;padding:7px 5px;font-size:11px;text-align:center;">1-уриниш</th>
+                          <th style="background:${H_S};color:#fff;border:1px solid #166534;padding:7px 5px;font-size:11px;text-align:center;">2-уриниш</th>
+                          <th style="background:${H_S};color:#fff;border:1px solid #166534;padding:7px 5px;font-size:11px;text-align:center;">Фарқ</th>
+                          <th style="background:${H_S};color:#fff;border:1px solid #166634;padding:7px 5px;font-size:11px;text-align:center;">Ҳолат</th>`;
+            }
+            hdr2 += `<th style="background:${D_S};color:#fff;border:1px solid #1e40af;padding:7px 5px;font-size:11px;text-align:center;">1-ур ўртача</th>
+                      <th style="background:${D_S};color:#fff;border:1px solid #1e40af;padding:7px 5px;font-size:11px;text-align:center;">2-ур ўртача</th>
+                      <th style="background:${D_S};color:#fff;border:1px solid #1e40af;padding:7px 5px;font-size:11px;text-align:center;">Фарқ</th></tr>`;
+
+            // Build data rows
+            let rows = '';
+            allItems.forEach((emp, idx) => {
+                const rowBg = idx % 2 === 0 ? WHITE : STRIPE;
+                const C = `border:1px solid #e5e7eb;padding:8px 6px;font-size:12px;text-align:center;background:${rowBg};`;
+                const L = `border:1px solid #e5e7eb;padding:8px 8px;font-size:12px;background:${rowBg};`;
+
+                let cells = '';
+                (emp.topics || []).forEach(t => {
+                    const s1 = t.attempt1 != null ? `${t.attempt1}%` : '—';
+                    const s2 = t.attempt2 != null ? `${t.attempt2}%` : '—';
+                    const diff = t.diff != null ? `${t.diff > 0 ? '+' : ''}${t.diff}%` : '—';
+                    const diffColor = t.diff > 0 ? '#16a34a' : t.diff < 0 ? '#dc2626' : '#6b7280';
+
+                    let holatBg = '#f3f4f6'; let holatC = '#6b7280'; let holatT = '—';
+                    if (t.holat === 'Тугатган') { holatBg = '#dcfce7'; holatC = '#166534'; holatT = '✅ Тугатган'; }
+                    else if (t.holat === '1-уринди') { holatBg = '#fef9c3'; holatC = '#854d0e'; holatT = '🔁 1-уринди'; }
+                    else if (t.holat === 'Жараёнда') { holatBg = '#dbeafe'; holatC = '#1e40af'; holatT = '🔄 Жараёнда'; }
+
+                    cells += `<td style="${C}">${s1}</td><td style="${C}">${s2}</td>
+                              <td style="${C}color:${diffColor};font-weight:700;">${diff}</td>
+                              <td style="${C}"><span style="background:${holatBg};color:${holatC};padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;">${holatT}</span></td>`;
+                });
+
+                const tot = emp.total || {};
+                const ta1 = tot.avg1 != null ? `<b style="color:#1e40af;">${tot.avg1}%</b>` : '—';
+                const ta2 = tot.avg2 != null ? `<b style="color:#166534;">${tot.avg2}%</b>` : '—';
+                const td  = tot.diff != null ? `<b style="color:${tot.diff > 0 ? '#16a34a' : '#dc2626'};">${tot.diff > 0 ? '+' : ''}${tot.diff}%</b>` : '—';
+
+                rows += `<tr>
+                    <td style="${C}font-weight:700;color:#9ca3af;">${idx + 1}</td>
+                    <td style="${L}font-weight:700;">${emp.name || ''}</td>
+                    <td style="${L}font-size:11px;color:#6b7280;">${emp.branch || ''}</td>
+                    ${cells}
+                    <td style="${C}">${ta1}</td>
+                    <td style="${C}">${ta2}</td>
+                    <td style="${C}">${td}</td>
+                </tr>`;
+            });
+
+            // Full HTML Excel
+            const now = new Date().toLocaleDateString('uz-UZ');
+            const html = `
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
+<x:Name>Ходимлар рейтинги</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>
+<body>
+<table style="border-collapse:collapse;font-family:Arial,sans-serif;">
+<tr><td colspan="${3 + topicCount * 4 + 3}" style="background:#15803d;color:#fff;font-size:16px;font-weight:700;padding:14px 16px;border:none;">
+📊 Ходимлар рейтинги — @Eco234_bot — ${now}
+</td></tr>
+<tr><td colspan="${3 + topicCount * 4 + 3}" style="background:#166534;color:rgba(255,255,255,0.7);font-size:11px;padding:6px 16px;border:none;">
+Жами: ${allItems.length} та ходим
+</td></tr>
+<tr><td colspan="${3 + topicCount * 4 + 3}" style="padding:4px;border:none;"></td></tr>
+${hdr1}
+${hdr2}
+${rows}
+</table>
+</body></html>`;
+
+            // Download
+            const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hodimlar_reytingi_${new Date().toISOString().slice(0,10)}.xls`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+
+            if (btn) { btn.innerHTML = '✅ Юклandi!'; setTimeout(() => { btn.innerHTML = origText; btn.disabled = false; }, 2000); }
+
+        } catch (e) {
+            console.error('Excel export error:', e);
+            if (btn) { btn.innerHTML = '❌ Хатолик'; setTimeout(() => { btn.innerHTML = origText; btn.disabled = false; }, 2000); }
+            alert('Excel юклашда хатолик: ' + e.message);
+        }
     }
 };
+
 
 document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('dashboard')) Dashboard.init();
