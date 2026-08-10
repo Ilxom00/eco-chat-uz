@@ -1,144 +1,215 @@
 const Dashboard = {
     currentPage: 1,
 
+    // Topic color palette
+    TOPIC_COLORS: [
+        { bg: 'linear-gradient(135deg,#1e3a5f,#3b82f6)', light: '#dbeafe', text: '#1e40af' },
+        { bg: 'linear-gradient(135deg,#166534,#22c55e)', light: '#dcfce7', text: '#15803d' },
+        { bg: 'linear-gradient(135deg,#6b21a8,#a855f7)', light: '#f3e8ff', text: '#7e22ce' },
+        { bg: 'linear-gradient(135deg,#9a3412,#f97316)', light: '#ffedd5', text: '#c2410c' },
+        { bg: 'linear-gradient(135deg,#0f4c75,#1565c0)', light: '#e3f2fd', text: '#1565c0' },
+    ],
+
     init() {
         this.loadStats();
         this.loadEmployees(1);
-
         const searchInput = document.getElementById('empSearch');
         if (searchInput) {
-            searchInput.addEventListener('input', this.debounce(() => this.loadEmployees(1), 500));
+            searchInput.addEventListener('input', this.debounce(() => this.loadEmployees(1), 400));
         }
     },
 
     async loadStats() {
         try {
             const stats = await API.getDashboardStats();
-            this.animateValue('kpi-total-employees', 0, stats.totalEmployees || 0, 1000);
-            this.animateValue('kpi-started', 0, stats.started || 0, 1000);
-            this.animateValue('kpi-completed', 0, stats.completed || 0, 1000);
-            const active = document.getElementById('kpi-active');
-            if (active) active.textContent = stats.active || 0;
-            const avg1 = document.getElementById('kpi-avg1');
-            if (avg1) avg1.textContent = (stats.avg1 || 0) + '%';
-            const avg2 = document.getElementById('kpi-avg2');
-            if (avg2) avg2.textContent = (stats.avg2 || 0) + '%';
-            const growth = document.getElementById('kpi-growth');
-            if (growth) growth.textContent = '+' + (stats.growth || 0) + '%';
-            this.animateValue('kpi-total-tests', 0, stats.totalTests || 0, 1000);
+
+            // Main counters
+            this.animateValue('kpi-total-employees', 0, stats.totalEmployees || 0, 900);
+            this.animateValue('kpi-completed', 0, stats.completed || 0, 900);
+            this.animateValue('kpi-active', 0, stats.active || 0, 900);
+
+            // Topic stat cards
+            const row = document.getElementById('topicStatsRow');
+            if (!row) return;
+
+            const topics = stats.topicStats || [];
+            const cols = topics.length + 1; // +1 for total card
+            row.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+            let html = '';
+
+            topics.forEach((t, i) => {
+                const color = this.TOPIC_COLORS[i % this.TOPIC_COLORS.length];
+                const a1 = t.avg1 !== null ? t.avg1 + '%' : '—';
+                const a2 = t.avg2 !== null ? t.avg2 + '%' : '—';
+                const diffVal = t.diff !== null ? t.diff : null;
+                const diffHtml = diffVal !== null
+                    ? `<span style="font-size:12px;font-weight:700;color:${diffVal > 0 ? '#16a34a' : diffVal < 0 ? '#dc2626' : '#6b7280'};margin-left:4px;">${diffVal > 0 ? '▲' : diffVal < 0 ? '▼' : ''}${diffVal > 0 ? '+' : ''}${diffVal}%</span>`
+                    : '';
+
+                html += `
+                <div style="background:${color.bg};border-radius:14px;padding:16px;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.15);position:relative;overflow:hidden;">
+                    <div style="position:absolute;top:-10px;right:-10px;font-size:60px;opacity:0.1;">📊</div>
+                    <div style="font-size:11px;font-weight:700;letter-spacing:1px;opacity:0.85;margin-bottom:8px;">${t.seq}-МАВЗУ</div>
+                    <div style="font-size:13px;font-weight:600;margin-bottom:12px;opacity:0.9;line-height:1.3;">${t.name || ''}</div>
+                    <div style="display:flex;flex-direction:column;gap:6px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.15);border-radius:8px;padding:6px 10px;">
+                            <span style="font-size:11px;opacity:0.8;">1-уриниш ўртача</span>
+                            <span style="font-size:16px;font-weight:800;">${a1}</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.15);border-radius:8px;padding:6px 10px;">
+                            <span style="font-size:11px;opacity:0.8;">2-уриниш ўртача</span>
+                            <span style="font-size:16px;font-weight:800;">${a2}</span>
+                        </div>
+                        ${diffVal !== null ? `
+                        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.2);border-radius:8px;padding:6px 10px;">
+                            <span style="font-size:11px;opacity:0.8;">Ўсиш</span>
+                            <span style="font-size:14px;font-weight:800;">${diffVal > 0 ? '+' : ''}${diffVal}%</span>
+                        </div>` : ''}
+                    </div>
+                </div>`;
+            });
+
+            // Total "Jami yakuni" card
+            const ta1 = stats.overallAvg1 !== null && stats.overallAvg1 !== undefined ? stats.overallAvg1 + '%' : '—';
+            const ta2 = stats.overallAvg2 !== null && stats.overallAvg2 !== undefined ? stats.overallAvg2 + '%' : '—';
+            const td = stats.overallDiff;
+            html += `
+            <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:14px;padding:16px;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.25);position:relative;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
+                <div style="position:absolute;top:-10px;right:-10px;font-size:60px;opacity:0.08;">🏆</div>
+                <div style="font-size:11px;font-weight:700;letter-spacing:1px;opacity:0.7;margin-bottom:8px;">ЖАМИ ЯКУНИ</div>
+                <div style="font-size:13px;font-weight:600;margin-bottom:12px;opacity:0.8;">Барча мавзулар бўйича</div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.08);border-radius:8px;padding:6px 10px;">
+                        <span style="font-size:11px;opacity:0.7;">1-уринишлар ўртача</span>
+                        <span style="font-size:16px;font-weight:800;color:#60a5fa;">${ta1}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.08);border-radius:8px;padding:6px 10px;">
+                        <span style="font-size:11px;opacity:0.7;">2-уринишлар ўртача</span>
+                        <span style="font-size:16px;font-weight:800;color:#34d399;">${ta2}</span>
+                    </div>
+                    ${td !== null && td !== undefined ? `
+                    <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.12);border-radius:8px;padding:6px 10px;">
+                        <span style="font-size:11px;opacity:0.7;">Умумий ўсиш</span>
+                        <span style="font-size:14px;font-weight:800;color:${td > 0 ? '#4ade80' : '#f87171'};">${td > 0 ? '+' : ''}${td}%</span>
+                    </div>` : ''}
+                </div>
+            </div>`;
+
+            row.innerHTML = html;
+
         } catch (e) {
-            console.error('Failed to load stats', e);
+            console.error('Stats load error:', e);
         }
     },
 
     buildHeader(topicCount) {
-        // Green header style
-        const GR = 'background:#16a34a;color:#fff;text-align:center;padding:8px 4px;border:1px solid #15803d;white-space:nowrap;font-size:12px;';
-        const GR2 = 'background:#22c55e;color:#fff;text-align:center;padding:6px 4px;border:1px solid #15803d;white-space:nowrap;font-size:11px;';
+        const GH = 'background:#15803d;color:#fff;text-align:center;padding:10px 6px;border:1px solid #166534;white-space:nowrap;font-size:12px;font-weight:700;';
+        const GS = 'background:#22c55e;color:#fff;text-align:center;padding:7px 4px;border:1px solid #166534;white-space:nowrap;font-size:11px;font-weight:600;';
+        const GD = 'background:#1e3a5f;color:#fff;text-align:center;padding:10px 6px;border:1px solid #1e40af;white-space:nowrap;font-size:12px;font-weight:700;';
+        const GDS = 'background:#2563eb;color:#fff;text-align:center;padding:7px 4px;border:1px solid #1e40af;white-space:nowrap;font-size:11px;font-weight:600;';
 
         let row1 = `<tr>
-            <th rowspan="2" style="${GR}">№</th>
-            <th rowspan="2" style="${GR}min-width:140px;">Ф.И.Ш.</th>
-            <th rowspan="2" style="${GR}min-width:160px;">Филиал</th>`;
-
+            <th rowspan="2" style="${GH}width:40px;">№</th>
+            <th rowspan="2" style="${GH}min-width:160px;text-align:left;padding-left:12px;">Ф.И.Ш.</th>
+            <th rowspan="2" style="${GH}min-width:170px;text-align:left;padding-left:8px;">Филиал</th>`;
         let row2 = '<tr>';
 
         for (let i = 1; i <= topicCount; i++) {
-            row1 += `<th colspan="4" style="${GR}">${i} Мавзу</th>`;
-            row2 += `
-                <th style="${GR2}">1-уриниш</th>
-                <th style="${GR2}">2-уриниш</th>
-                <th style="${GR2}">Фарқ</th>
-                <th style="${GR2}">Ҳолат</th>`;
+            row1 += `<th colspan="4" style="${GH}">${i}-Мавзу</th>`;
+            row2 += `<th style="${GS}">1-уриниш</th><th style="${GS}">2-уриниш</th><th style="${GS}">Фарқ</th><th style="${GS}">Ҳолат</th>`;
         }
 
-        // Jami yakuni
-        row1 += `<th colspan="3" style="${GR}">Жами якуни</th>`;
-        row2 += `
-            <th style="${GR2}">1-уринишлар</th>
-            <th style="${GR2}">2-уринишлар</th>
-            <th style="${GR2}">Фарқ</th>`;
+        row1 += `<th colspan="3" style="${GD}">Жами якуни</th><th rowspan="2" style="${GD}width:50px;">Амал</th>`;
+        row2 += `<th style="${GDS}">1-ур ўртача</th><th style="${GDS}">2-ур ўртача</th><th style="${GDS}">Фарқ</th>`;
 
         row1 += '</tr>';
         row2 += '</tr>';
-
-        // Delete col header
-        row1 += '';
-
         return row1 + row2;
     },
 
     async loadEmployees(page = 1) {
         this.currentPage = page;
         try {
-            const search = document.getElementById('empSearch')?.value || '';
+            const search = (document.getElementById('empSearch')?.value || '').trim();
             const data = await API.getDashboardEmployees({ page, search });
-
             const thead = document.getElementById('ratingTableHead');
             const tbody = document.getElementById('employeesTableBody');
 
             if (!data || !data.items || data.items.length === 0) {
                 if (thead) thead.innerHTML = this.buildHeader(4);
-                if (tbody) tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:24px;color:#888">Маълумот йўқ</td></tr>';
+                if (tbody) tbody.innerHTML = `
+                    <tr><td colspan="22" style="text-align:center;padding:48px;color:#9ca3af;">
+                        <div style="font-size:40px;margin-bottom:12px;">📋</div>
+                        <div style="font-size:16px;font-weight:600;">Ходимлар рўйхати бўш</div>
+                        <div style="font-size:13px;margin-top:4px;">Аввал ходим қўшинг</div>
+                    </td></tr>`;
                 return;
             }
 
             const topicCount = data.items[0]?.topics?.length || 4;
             if (thead) thead.innerHTML = this.buildHeader(topicCount);
 
-            const CELL = 'text-align:center;padding:6px 4px;border:1px solid #e5e7eb;';
-            const CELL_L = 'padding:6px 8px;border:1px solid #e5e7eb;';
+            const B = 'border:1px solid #e5e7eb;';
+            const C = `text-align:center;padding:8px 5px;${B}font-size:12px;`;
+            const L = `padding:8px 10px;${B}`;
 
             tbody.innerHTML = data.items.map((emp, idx) => {
+                const rowBg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+
                 const topicCells = (emp.topics || []).map(t => {
-                    const s1 = t.attempt1 !== null && t.attempt1 !== undefined ? t.attempt1 + '%' : '—';
-                    const s2 = t.attempt2 !== null && t.attempt2 !== undefined ? t.attempt2 + '%' : '—';
+                    const s1 = t.attempt1 !== null && t.attempt1 !== undefined ? `<b>${t.attempt1}%</b>` : '<span style="color:#d1d5db;">—</span>';
+                    const s2 = t.attempt2 !== null && t.attempt2 !== undefined ? `<b>${t.attempt2}%</b>` : '<span style="color:#d1d5db;">—</span>';
                     const diff = t.diff !== null && t.diff !== undefined
-                        ? `<span style="color:${t.diff > 0 ? '#16a34a' : t.diff < 0 ? '#dc2626' : '#6b7280'}">${t.diff > 0 ? '+' : ''}${t.diff}%</span>`
-                        : '—';
-                    const holat = t.holat || '—';
-                    const holatColor = holat === 'Тугатган' ? '#16a34a' : holat === '1-уринди' ? '#d97706' : holat === 'Жараёнда' ? '#3b82f6' : '#9ca3af';
+                        ? `<span style="font-weight:700;color:${t.diff > 0 ? '#16a34a' : t.diff < 0 ? '#dc2626' : '#6b7280'}">${t.diff > 0 ? '+' : ''}${t.diff}%</span>`
+                        : '<span style="color:#d1d5db;">—</span>';
+
+                    let holatBg = '#f3f4f6'; let holatC = '#9ca3af'; let holatT = '—';
+                    if (t.holat === 'Тугатган') { holatBg = '#dcfce7'; holatC = '#166534'; holatT = '✅ Тугатган'; }
+                    else if (t.holat === '1-уринди') { holatBg = '#fef9c3'; holatC = '#854d0e'; holatT = '🔁 1-уринди'; }
+                    else if (t.holat === 'Жараёнда') { holatBg = '#dbeafe'; holatC = '#1e40af'; holatT = '🔄 Жараёнда'; }
+
                     return `
-                        <td style="${CELL}">${s1}</td>
-                        <td style="${CELL}">${s2}</td>
-                        <td style="${CELL}">${diff}</td>
-                        <td style="${CELL}font-size:11px;color:${holatColor};font-weight:600;">${holat}</td>`;
+                        <td style="${C}">${s1}</td>
+                        <td style="${C}">${s2}</td>
+                        <td style="${C}">${diff}</td>
+                        <td style="${C}padding:4px;">
+                            <span style="background:${holatBg};color:${holatC};padding:3px 7px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;">${holatT}</span>
+                        </td>`;
                 }).join('');
 
                 const tot = emp.total || {};
-                const ta1 = tot.avg1 !== null && tot.avg1 !== undefined ? tot.avg1 + '%' : '—';
-                const ta2 = tot.avg2 !== null && tot.avg2 !== undefined ? tot.avg2 + '%' : '—';
+                const ta1 = tot.avg1 !== null && tot.avg1 !== undefined ? `<b style="color:#1e40af;font-size:14px;">${tot.avg1}%</b>` : '<span style="color:#d1d5db;">—</span>';
+                const ta2 = tot.avg2 !== null && tot.avg2 !== undefined ? `<b style="color:#166534;font-size:14px;">${tot.avg2}%</b>` : '<span style="color:#d1d5db;">—</span>';
                 const tdiff = tot.diff !== null && tot.diff !== undefined
-                    ? `<span style="color:${tot.diff > 0 ? '#16a34a' : tot.diff < 0 ? '#dc2626' : '#6b7280'}">${tot.diff > 0 ? '+' : ''}${tot.diff}%</span>`
-                    : '—';
+                    ? `<span style="font-weight:800;font-size:14px;color:${tot.diff > 0 ? '#16a34a' : tot.diff < 0 ? '#dc2626' : '#6b7280'}">${tot.diff > 0 ? '+' : ''}${tot.diff}%</span>`
+                    : '<span style="color:#d1d5db;">—</span>';
 
-                const rowBg = idx % 2 === 0 ? '#fff' : '#f9fafb';
-
-                return `<tr id="emp-row-${emp.id}" style="background:${rowBg};">
-                    <td style="${CELL}">${(page-1)*10 + idx + 1}</td>
-                    <td style="${CELL_L}cursor:pointer;font-weight:500;" onclick="Employees.showDetail('${emp.id}')">${emp.name}</td>
-                    <td style="${CELL_L}font-size:12px;color:#6b7280;">${emp.branch}</td>
+                return `<tr id="emp-row-${emp.id}" style="background:${rowBg};transition:background 0.2s;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='${rowBg}'">
+                    <td style="${C}font-weight:700;color:#9ca3af;">${(page - 1) * 10 + idx + 1}</td>
+                    <td style="${L}cursor:pointer;" onclick="Employees.showDetail('${emp.id}')">
+                        <div style="font-weight:700;font-size:13px;color:#111827;">${emp.name}</div>
+                    </td>
+                    <td style="${L}font-size:11px;color:#6b7280;line-height:1.3;">${emp.branch}</td>
                     ${topicCells}
-                    <td style="${CELL}font-weight:600;">${ta1}</td>
-                    <td style="${CELL}font-weight:600;">${ta2}</td>
-                    <td style="${CELL}font-weight:600;">${tdiff}</td>
-                    <td style="${CELL}">
-                        <button
-                            onclick="Dashboard.confirmDeleteEmployee('${emp.id}', '${(emp.name||'').replace(/'/g,"\\'")}')"
-                            style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;"
-                            title="O'chirish"
-                        >🗑️</button>
+                    <td style="${C}">${ta1}</td>
+                    <td style="${C}">${ta2}</td>
+                    <td style="${C}">${tdiff}</td>
+                    <td style="${C}">
+                        <button onclick="Dashboard.confirmDeleteEmployee('${emp.id}','${(emp.name||'').replace(/'/g,"\\'")}')"
+                            style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px;transition:opacity .2s;"
+                            onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"
+                            title="O'chirish">🗑️</button>
                     </td>
                 </tr>`;
             }).join('');
 
-            // Pagination
             this.renderPagination(data.total, page);
 
         } catch (e) {
             console.error(e);
             const tbody = document.getElementById('employeesTableBody');
-            if (tbody) tbody.innerHTML = `<tr><td colspan="20" style="color:var(--danger);padding:20px">Xato: ${e.message}</td></tr>`;
+            if (tbody) tbody.innerHTML = `<tr><td colspan="22" style="text-align:center;padding:24px;color:#dc2626;font-weight:600;">Xato: ${e.message}</td></tr>`;
         }
     },
 
@@ -147,11 +218,12 @@ const Dashboard = {
         if (!container) return;
         const totalPages = Math.ceil(total / 10);
         if (totalPages <= 1) { container.innerHTML = ''; return; }
-
-        let html = '<div style="display:flex;gap:8px;justify-content:center;margin-top:16px;">';
+        let html = '<div style="display:flex;gap:8px;justify-content:center;">';
         for (let p = 1; p <= totalPages; p++) {
-            const active = p === page ? 'background:var(--primary,#166534);color:white;' : 'background:#f3f4f6;color:#374151;';
-            html += `<button onclick="Dashboard.loadEmployees(${p})" style="${active}border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-weight:600;">${p}</button>`;
+            const active = p === page
+                ? 'background:linear-gradient(135deg,#15803d,#16a34a);color:#fff;box-shadow:0 4px 12px rgba(22,163,74,0.35);'
+                : 'background:#f3f4f6;color:#374151;';
+            html += `<button onclick="Dashboard.loadEmployees(${p})" style="${active}border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-weight:700;font-size:13px;transition:all .2s;">${p}</button>`;
         }
         html += '</div>';
         container.innerHTML = html;
@@ -161,63 +233,55 @@ const Dashboard = {
         const obj = document.getElementById(id);
         if (!obj) return;
         let startTimestamp = null;
-        const step = (timestamp) => {
-            if (!startTimestamp) startTimestamp = timestamp;
-            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-            obj.innerHTML = Math.floor(progress * (end - start) + start);
-            if (progress < 1) window.requestAnimationFrame(step);
+        const step = (ts) => {
+            if (!startTimestamp) startTimestamp = ts;
+            const prog = Math.min((ts - startTimestamp) / duration, 1);
+            obj.textContent = Math.floor(prog * (end - start) + start);
+            if (prog < 1) window.requestAnimationFrame(step);
         };
         window.requestAnimationFrame(step);
     },
 
-    debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => { clearTimeout(timeout); func(...args); };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
+    debounce(fn, wait) {
+        let t;
+        return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
     },
 
     confirmDeleteEmployee(empId, empName) {
-        const existing = document.getElementById('deleteEmpModal');
-        if (existing) existing.remove();
+        document.getElementById('deleteEmpModal')?.remove();
         const modal = document.createElement('div');
         modal.id = 'deleteEmpModal';
-        modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;';
         modal.innerHTML = `
-            <div style="background:var(--bg-card,#fff);border-radius:16px;padding:32px;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-                <div style="text-align:center;margin-bottom:20px;">
-                    <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
-                    <h2 style="margin:0 0 8px 0;color:var(--danger,#dc2626);">Xodimni o'chirish</h2>
-                    <p style="color:var(--text-secondary);margin:0;font-size:15px;">
-                        <strong>${empName}</strong> xodimini o'chirasizmi?<br>
-                        <span style="color:var(--danger,#dc2626);font-weight:600;">Barcha test natijalari va tarix ham o'chadi!</span>
-                    </p>
-                </div>
+            <div style="background:#fff;border-radius:20px;padding:36px;max-width:420px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,0.3);text-align:center;">
+                <div style="font-size:52px;margin-bottom:14px;">⚠️</div>
+                <h2 style="margin:0 0 10px;color:#dc2626;font-size:20px;">Ходимни ўчириш</h2>
+                <p style="color:#6b7280;margin:0 0 24px;font-size:15px;line-height:1.6;">
+                    <strong style="color:#111827;">${empName}</strong> ходимини ўчирасизми?<br>
+                    <span style="color:#dc2626;font-weight:700;font-size:14px;">Барча тест натижалари ва тарих ҳам ўчади!</span>
+                </p>
                 <div style="display:flex;gap:12px;justify-content:center;">
-                    <button onclick="document.getElementById('deleteEmpModal').remove()" style="padding:12px 24px;border-radius:8px;border:2px solid var(--border,#e5e7eb);background:transparent;cursor:pointer;font-size:15px;font-weight:600;">Bekor</button>
-                    <button id="confirmEmpDeleteBtn" onclick="Dashboard.executeDeleteEmployee('${empId}')" style="padding:12px 24px;border-radius:8px;border:none;background:linear-gradient(135deg,#dc2626,#b91c1c);color:white;cursor:pointer;font-size:15px;font-weight:600;">🗑️ Ha, o'chirish</button>
+                    <button onclick="document.getElementById('deleteEmpModal').remove()" style="padding:12px 28px;border-radius:10px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;font-size:14px;font-weight:600;color:#374151;">Бекор</button>
+                    <button id="confirmEmpDeleteBtn" onclick="Dashboard.executeDeleteEmployee('${empId}')" style="padding:12px 28px;border-radius:10px;border:none;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;cursor:pointer;font-size:14px;font-weight:700;">🗑️ Ҳа, ўчириш</button>
                 </div>
-            </div>
-        `;
+            </div>`;
         document.body.appendChild(modal);
         modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
     },
 
     async executeDeleteEmployee(empId) {
         const btn = document.getElementById('confirmEmpDeleteBtn');
-        if (btn) { btn.textContent = "O'chirilmoqda..."; btn.disabled = true; }
+        if (btn) { btn.textContent = "Ўчирилмоқда..."; btn.disabled = true; }
         try {
             await API.deleteEmployee(empId);
             document.getElementById('deleteEmpModal')?.remove();
-            const row = document.getElementById('emp-row-' + empId);
-            if (row) row.remove();
-            const t = document.createElement('div');
-            t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;padding:14px 20px;border-radius:12px;font-weight:600;background:#16a34a;color:white;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,0.2);';
-            t.textContent = "✅ Xodim o'chirildi!";
-            document.body.appendChild(t);
-            setTimeout(() => t.remove(), 3000);
+            document.getElementById('emp-row-' + empId)?.remove();
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;bottom:28px;right:28px;z-index:99999;padding:14px 22px;border-radius:14px;font-weight:700;background:linear-gradient(135deg,#166534,#16a34a);color:#fff;font-size:14px;box-shadow:0 8px 24px rgba(22,163,74,0.4);';
+            toast.textContent = "✅ Ходим ўчирилди!";
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3500);
+            this.loadStats();
         } catch (e) {
             document.getElementById('deleteEmpModal')?.remove();
             alert('Xato: ' + e.message);
@@ -226,7 +290,5 @@ const Dashboard = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('dashboard')) {
-        Dashboard.init();
-    }
+    if (document.getElementById('dashboard')) Dashboard.init();
 });
