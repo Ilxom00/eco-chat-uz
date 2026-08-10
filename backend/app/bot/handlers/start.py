@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 eco-chat.uz — /start Command Handler
-1. Registered user → show main menu directly
-2. New user       → show welcome text + inline branch selection buttons
+1. Registered user → show welcome back & main menu directly
+2. New user       → show welcome text + 15 inline branch selection buttons
 """
 from __future__ import annotations
 
@@ -42,48 +42,52 @@ FALLBACK_BRANCHES = [
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     try:
         user_id = update.effective_user.id
+        msg = update.effective_message
 
         try:
-            status = await bot_api.get_employee_status(user_id)
-            if isinstance(status, dict) and status.get("registration_state") == "REGISTERED":
-                await update.message.reply_text(
-                    messages.WELCOME_BACK,
-                    reply_markup=get_main_menu_keyboard(),
-                )
+            emp = await bot_api.get_employee_by_telegram_id(user_id)
+            if emp and emp.get("full_name"):
+                if msg:
+                    await msg.reply_text(
+                        messages.WELCOME_BACK,
+                        reply_markup=get_main_menu_keyboard(),
+                    )
                 return MAIN_MENU
         except Exception as e:
-            logger.warning("Error fetching employee status for %d: %s", user_id, e)
+            logger.warning("Error fetching employee for %d: %s", user_id, e)
 
-        # New user — fetch branches
+        # New user — fetch 15 branches
         branches = []
         try:
             resp = await bot_api.get_branches()
-            if isinstance(resp, dict):
-                branches = resp.get("branches", [])
-            elif isinstance(resp, list):
+            if isinstance(resp, list) and len(resp) > 0:
                 branches = resp
+            elif isinstance(resp, dict):
+                branches = resp.get("branches", [])
         except Exception as e:
             logger.error("Error fetching branches: %s", e)
 
         if not branches:
             branches = FALLBACK_BRANCHES
 
-        await update.message.reply_text(
-            messages.WELCOME_NEW,
-            reply_markup=get_branch_keyboard(branches),
-        )
+        if msg:
+            await msg.reply_text(
+                messages.WELCOME_NEW,
+                reply_markup=get_branch_keyboard(branches),
+            )
         return ASK_BRANCH
 
     except Exception as e:
         logger.error("Critical error in start_command: %s", e, exc_info=True)
-        # Bulletproof fallback — always send welcome message & branch keyboard
-        try:
-            await update.message.reply_text(
-                messages.WELCOME_NEW,
-                reply_markup=get_branch_keyboard(FALLBACK_BRANCHES),
-            )
-        except Exception:
-            pass
+        msg = update.effective_message
+        if msg:
+            try:
+                await msg.reply_text(
+                    messages.WELCOME_NEW,
+                    reply_markup=get_branch_keyboard(FALLBACK_BRANCHES),
+                )
+            except Exception:
+                pass
         return ASK_BRANCH
 
 
