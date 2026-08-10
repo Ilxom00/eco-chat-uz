@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 Bot direct DB & service integration layer.
-Interacts directly with SQLAlchemy AsyncSession to eliminate port & localhost HTTP dependency.
+Interacts directly with AsyncSessionLocal to eliminate port & localhost HTTP dependency.
 """
 import logging
 from typing import Optional, List, Dict, Any
-from app.database import async_session_maker, engine
+from app.database import AsyncSessionLocal, engine
 from app.services import employee_service, branch_service, topic_service, test_engine
 from app.seeds.seed import seed_topics_and_questions
 
@@ -21,7 +21,7 @@ class BotAPIClient:
         phone: str = "", 
         branch_name: Optional[str] = None
     ) -> Dict[str, Any]:
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             emp, is_new = await employee_service.get_or_create_employee(db, telegram_user_id)
             resolved_bid = await branch_service.resolve_branch_id(db, branch_id=branch_id, branch_name=branch_name)
             emp = await employee_service.update_registration(
@@ -30,7 +30,7 @@ class BotAPIClient:
             return {"employee_id": str(emp.id), "success": True}
 
     async def get_employee_status(self, telegram_user_id: int) -> Dict[str, Any]:
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             emp = await employee_service.get_employee_by_telegram_id(db, telegram_user_id)
             if not emp:
                 return {"registration_state": "NOT_REGISTERED"}
@@ -62,7 +62,7 @@ class BotAPIClient:
             }
 
     async def get_branches(self) -> Dict[str, Any]:
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             branches = await branch_service.get_all_branches(db, False)
             return {
                 "branches": [
@@ -72,7 +72,7 @@ class BotAPIClient:
             }
 
     async def get_topics(self, telegram_user_id: int) -> List[Dict[str, Any]]:
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             emp = await employee_service.get_employee_by_telegram_id(db, telegram_user_id)
             if not emp:
                 return []
@@ -98,7 +98,7 @@ class BotAPIClient:
             return result
 
     async def get_topic(self, topic_id: str) -> Dict[str, Any]:
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             topic = await topic_service.get_topic_by_id(db, topic_id)
             if not topic:
                 return {"id": topic_id, "name": "Mavzu"}
@@ -110,7 +110,7 @@ class BotAPIClient:
             }
 
     async def start_attempt(self, telegram_user_id: int, topic_id: str, attempt_number: int, seminar_confirmed: bool = False) -> Dict[str, Any]:
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             emp = await employee_service.get_employee_by_telegram_id(db, telegram_user_id)
             if not emp:
                 return {"error": "Employee not found"}
@@ -121,18 +121,18 @@ class BotAPIClient:
             return {"attempt_id": str(attempt.id), "first_question": first_q}
 
     async def get_current_question(self, attempt_id: str) -> Dict[str, Any]:
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             q = await test_engine.get_current_question(db, attempt_id)
             return {"question": q}
 
     async def submit_answer(self, attempt_id: str, display_order: int, selected_answer_id: str) -> Dict[str, Any]:
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             from app.redis_client import redis_client
             res = await test_engine.submit_answer(db, redis_client, attempt_id, display_order, selected_answer_id)
             return res
 
     async def get_attempt_results(self, attempt_id: str) -> Dict[str, Any]:
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             res = await test_engine.get_attempt_results(db, attempt_id)
             return res
 
