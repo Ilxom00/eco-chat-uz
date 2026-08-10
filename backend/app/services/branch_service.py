@@ -3,8 +3,9 @@ import logging
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import text
+from sqlalchemy import text, func
 from app.models.branch import Branch
+from app.models.employee import Employee
 
 logger = logging.getLogger(__name__)
 
@@ -130,12 +131,15 @@ async def delete_branch(db: AsyncSession, branch_id: str) -> bool:
     """Delete branch and unlink employees."""
     try:
         bid_uuid = uuid.UUID(str(branch_id).strip())
-        # Unlink employees via ORM-safe raw SQL with proper UUID
-        await db.execute(
-            text("UPDATE employees SET branch_id = NULL WHERE branch_id = :bid"),
-            {"bid": bid_uuid}
-        )
-        await db.execute(text("DELETE FROM branches WHERE id = :bid"), {"bid": bid_uuid})
+        # Unlink employees using ORM
+        emps = await db.execute(select(Employee).filter(Employee.branch_id == bid_uuid))
+        for emp in emps.scalars().all():
+            emp.branch_id = None
+        # Delete branch using ORM
+        branch = await db.execute(select(Branch).filter(Branch.id == bid_uuid))
+        b = branch.scalar_one_or_none()
+        if b:
+            await db.delete(b)
         await db.commit()
         return True
     except Exception as e:
@@ -147,8 +151,7 @@ async def get_employee_count_in_branch(db: AsyncSession, branch_id: str) -> int:
     try:
         bid_uuid = uuid.UUID(str(branch_id).strip())
         result = await db.execute(
-            text("SELECT COUNT(*) FROM employees WHERE branch_id = :bid"),
-            {"bid": bid_uuid}
+            select(func.count()).select_from(Employee).filter(Employee.branch_id == bid_uuid)
         )
         return result.scalar() or 0
     except (ValueError, TypeError):
