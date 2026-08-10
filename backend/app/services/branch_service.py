@@ -1,4 +1,5 @@
 import uuid
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import text
@@ -26,15 +27,21 @@ async def create_branch(db: AsyncSession, name: str, sort_order: int = None) -> 
     return branch
 
 
-async def resolve_branch_id(db: AsyncSession, branch_id: str | None = None, branch_name: str | None = None) -> str | None:
-    """Safely resolve valid UUID for branch_id from either branch_id string or branch_name."""
+async def resolve_branch_id(
+    db: AsyncSession, 
+    branch_id: Optional[str | uuid.UUID] = None, 
+    branch_name: Optional[str] = None
+) -> Optional[uuid.UUID]:
+    """Safely resolve valid uuid.UUID for branch from either branch_id or branch_name."""
     if branch_id:
+        if isinstance(branch_id, uuid.UUID):
+            return branch_id
         try:
             val_uuid = uuid.UUID(str(branch_id))
             res = await db.execute(select(Branch).filter(Branch.id == val_uuid))
             b = res.scalar_one_or_none()
             if b:
-                return str(b.id)
+                return b.id
         except (ValueError, TypeError):
             pass  # Not a valid UUID (e.g. 'fb_1')
 
@@ -42,11 +49,11 @@ async def resolve_branch_id(db: AsyncSession, branch_id: str | None = None, bran
         res = await db.execute(select(Branch).filter(Branch.name == branch_name))
         b = res.scalar_one_or_none()
         if b:
-            return str(b.id)
+            return b.id
         
         # Auto-create branch if not found by name
         new_b = await create_branch(db, name=branch_name)
-        return str(new_b.id)
+        return new_b.id
 
     return None
 
