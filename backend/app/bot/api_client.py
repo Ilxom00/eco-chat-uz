@@ -27,11 +27,12 @@ class BotAPIClient:
                 print(f"API Error: {e}")
                 raise e
 
-    async def register_employee(self, telegram_user_id: int, full_name: str, branch_id: int, phone: str) -> dict:
+    async def register_employee(self, telegram_user_id: int, full_name: str, branch_id: str, phone: str, branch_name: str = None) -> dict:
         return await self._request("POST", "/register", json={
             "telegram_user_id": telegram_user_id,
             "full_name": full_name,
             "branch_id": branch_id,
+            "branch_name": branch_name,
             "phone": phone
         })
 
