@@ -44,6 +44,19 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _make_aware(dt: datetime) -> datetime:
+    """
+    Convert naive datetime (from SQLite) to UTC-aware.
+    If already aware, return as-is.
+    SQLite stores datetimes WITHOUT timezone info — this normalizes them.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 def _shuffle_different(lst: list, reference: Optional[list] = None, max_tries: int = 100) -> list:
     """
     Return a shuffled copy of lst that differs from reference (if provided).
@@ -301,7 +314,7 @@ async def can_start_attempt(
 
         # 10-minute gate (hidden from user — natural UX message used instead)
         min_wait = timedelta(seconds=settings.attempt2_min_wait_seconds)
-        earliest_start = attempt1.completed_at + min_wait
+        earliest_start = _make_aware(attempt1.completed_at) + min_wait
         now = _utc_now()
 
         if now < earliest_start:
@@ -687,7 +700,7 @@ async def submit_answer(
     now = _utc_now()
 
     # SERVER-SIDE TIMER CHECK (canonical)
-    if aq.question_deadline_at and now > aq.question_deadline_at:
+    if aq.question_deadline_at and now > _make_aware(aq.question_deadline_at):
         # Late answer — process as timeout
         result = await _process_timeout(db, aq)
         await db.commit()
@@ -714,7 +727,7 @@ async def submit_answer(
     is_correct = str(etq.correct_answer_id) == selected_answer_id
 
     # Record answer
-    response_time_ms = int((now - aq.question_started_at).total_seconds() * 1000) if aq.question_started_at else 0
+    response_time_ms = int((now - _make_aware(aq.question_started_at)).total_seconds() * 1000) if aq.question_started_at else 0
     aq.answer_status = "ANSWERED"
     aq.selected_answer_id = selected_answer_id
     aq.is_correct = is_correct
@@ -836,8 +849,8 @@ async def handle_timeout(db: AsyncSession, attempt_question_id: str) -> dict:
         return {"answer_status": aq.answer_status if aq else "NOT_FOUND", "attempt_completed": False}
 
     now = _utc_now()
-    if aq.question_deadline_at and now <= aq.question_deadline_at:
-        return {"answer_status": "PENDING", "attempt_completed": False, "remaining_seconds": int((aq.question_deadline_at - now).total_seconds())}
+    if aq.question_deadline_at and now <= _make_aware(aq.question_deadline_at):
+        return {"answer_status": "PENDING", "attempt_completed": False, "remaining_seconds": int((_make_aware(aq.question_deadline_at) - now).total_seconds())}
 
     result = await _process_timeout(db, aq)
     await db.commit()
@@ -874,7 +887,7 @@ async def _process_expired_questions(db: AsyncSession, attempt: TestAttempt) -> 
         if not current_aq.question_deadline_at:
             break
 
-        if now <= current_aq.question_deadline_at:
+        if now <= _make_aware(current_aq.question_deadline_at):
             # Not expired yet
             break
 
@@ -1129,7 +1142,7 @@ async def confirm_seminar(
 
         if a1 and a1.completed_at:
             now = _utc_now()
-            elapsed = (now - a1.completed_at).total_seconds()
+            elapsed = (now - _make_aware(a1.completed_at)).total_seconds()
             if elapsed < settings.attempt2_min_wait_seconds:
                 # Not yet time — don't reveal the 10-min rule
                 return {
