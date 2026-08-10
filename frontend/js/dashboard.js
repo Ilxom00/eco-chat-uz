@@ -1,5 +1,6 @@
 const Dashboard = {
     currentPage: 1,
+    employeesMap: {},
 
     // Topic color palette
     TOPIC_COLORS: [
@@ -43,9 +44,6 @@ const Dashboard = {
                 const a1 = t.avg1 !== null ? t.avg1 + '%' : '—';
                 const a2 = t.avg2 !== null ? t.avg2 + '%' : '—';
                 const diffVal = t.diff !== null ? t.diff : null;
-                const diffHtml = diffVal !== null
-                    ? `<span style="font-size:12px;font-weight:700;color:${diffVal > 0 ? '#16a34a' : diffVal < 0 ? '#dc2626' : '#6b7280'};margin-left:4px;">${diffVal > 0 ? '▲' : diffVal < 0 ? '▼' : ''}${diffVal > 0 ? '+' : ''}${diffVal}%</span>`
-                    : '';
 
                 html += `
                 <div style="background:${color.bg};border-radius:14px;padding:16px;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.15);position:relative;overflow:hidden;">
@@ -120,7 +118,7 @@ const Dashboard = {
             row2 += `<th style="${GS}">1-уриниш</th><th style="${GS}">2-уриниш</th><th style="${GS}">Фарқ</th><th style="${GS}">Ҳолат</th>`;
         }
 
-        row1 += `<th colspan="3" style="${GD}">Жами якуни</th><th rowspan="2" style="${GD}width:50px;">Амал</th>`;
+        row1 += `<th colspan="3" style="${GD}">Жами якуни</th>`;
         row2 += `<th style="${GDS}">1-ур ўртача</th><th style="${GDS}">2-ур ўртача</th><th style="${GDS}">Фарқ</th>`;
 
         row1 += '</tr>';
@@ -137,15 +135,22 @@ const Dashboard = {
             const tbody = document.getElementById('employeesTableBody');
 
             if (!data || !data.items || data.items.length === 0) {
+                this.employeesMap = {};
                 if (thead) thead.innerHTML = this.buildHeader(4);
                 if (tbody) tbody.innerHTML = `
-                    <tr><td colspan="22" style="text-align:center;padding:48px;color:#9ca3af;">
+                    <tr><td colspan="21" style="text-align:center;padding:48px;color:#9ca3af;">
                         <div style="font-size:40px;margin-bottom:12px;">📋</div>
                         <div style="font-size:16px;font-weight:600;">Ходимлар рўйхати бўш</div>
-                        <div style="font-size:13px;margin-top:4px;">Аввал ходим қўшинг</div>
+                        <div style="font-size:13px;margin-top:4px;">Бот орқали ходимлар рўйхатдан ўтиши билан бу ерда пайдо бўлади</div>
                     </td></tr>`;
                 return;
             }
+
+            // Cache employee map
+            this.employeesMap = {};
+            data.items.forEach(emp => {
+                this.employeesMap[emp.id] = emp;
+            });
 
             const topicCount = data.items[0]?.topics?.length || 4;
             if (thead) thead.innerHTML = this.buildHeader(topicCount);
@@ -185,22 +190,23 @@ const Dashboard = {
                     ? `<span style="font-weight:800;font-size:14px;color:${tot.diff > 0 ? '#16a34a' : tot.diff < 0 ? '#dc2626' : '#6b7280'}">${tot.diff > 0 ? '+' : ''}${tot.diff}%</span>`
                     : '<span style="color:#d1d5db;">—</span>';
 
-                return `<tr id="emp-row-${emp.id}" style="background:${rowBg};transition:background 0.2s;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='${rowBg}'">
+                return `<tr id="emp-row-${emp.id}" style="background:${rowBg};cursor:pointer;transition:background 0.2s;" 
+                    onclick="Employees.showDetail('${emp.id}')"
+                    onmouseover="this.style.background='#f0fdf4'" 
+                    onmouseout="this.style.background='${rowBg}'"
+                    title="Ходим маълумотларини ва ўчириш тугмасини кўриш учун босинг">
                     <td style="${C}font-weight:700;color:#9ca3af;">${(page - 1) * 10 + idx + 1}</td>
-                    <td style="${L}cursor:pointer;" onclick="Employees.showDetail('${emp.id}')">
-                        <div style="font-weight:700;font-size:13px;color:#111827;">${emp.name}</div>
+                    <td style="${L}">
+                        <div style="font-weight:700;font-size:13px;color:#111827;display:flex;align-items:center;gap:6px;">
+                            <span>👤</span>
+                            <span>${emp.name}</span>
+                        </div>
                     </td>
-                    <td style="${L}font-size:11px;color:#6b7280;line-height:1.3;">${emp.branch}</td>
+                    <td style="${L}font-size:11px;color:#4b5563;line-height:1.3;font-weight:600;">${emp.branch || '—'}</td>
                     ${topicCells}
                     <td style="${C}">${ta1}</td>
                     <td style="${C}">${ta2}</td>
                     <td style="${C}">${tdiff}</td>
-                    <td style="${C}">
-                        <button onclick="Dashboard.confirmDeleteEmployee('${emp.id}','${(emp.name||'').replace(/'/g,"\\'")}')"
-                            style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px;transition:opacity .2s;"
-                            onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"
-                            title="O'chirish">🗑️</button>
-                    </td>
                 </tr>`;
             }).join('');
 
@@ -209,7 +215,7 @@ const Dashboard = {
         } catch (e) {
             console.error(e);
             const tbody = document.getElementById('employeesTableBody');
-            if (tbody) tbody.innerHTML = `<tr><td colspan="22" style="text-align:center;padding:24px;color:#dc2626;font-weight:600;">Xato: ${e.message}</td></tr>`;
+            if (tbody) tbody.innerHTML = `<tr><td colspan="21" style="text-align:center;padding:24px;color:#dc2626;font-weight:600;">Хатолик: ${e.message}</td></tr>`;
         }
     },
 
@@ -251,17 +257,17 @@ const Dashboard = {
         document.getElementById('deleteEmpModal')?.remove();
         const modal = document.createElement('div');
         modal.id = 'deleteEmpModal';
-        modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;';
         modal.innerHTML = `
             <div style="background:#fff;border-radius:20px;padding:36px;max-width:420px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,0.3);text-align:center;">
                 <div style="font-size:52px;margin-bottom:14px;">⚠️</div>
-                <h2 style="margin:0 0 10px;color:#dc2626;font-size:20px;">Ходимни ўчириш</h2>
+                <h2 style="margin:0 0 10px;color:#dc2626;font-size:20px;">Ходимни базадан ўчириш</h2>
                 <p style="color:#6b7280;margin:0 0 24px;font-size:15px;line-height:1.6;">
-                    <strong style="color:#111827;">${empName}</strong> ходимини ўчирасизми?<br>
-                    <span style="color:#dc2626;font-weight:700;font-size:14px;">Барча тест натижалари ва тарих ҳам ўчади!</span>
+                    <strong style="color:#111827;">${empName}</strong> ходимини маълумотлар базасидан бутунлай ўчирасизми?<br>
+                    <span style="color:#dc2626;font-weight:700;font-size:14px;">Ушбу ходимга тегишли барча маълумотлар ва тест тарихи базадан ўчади!</span>
                 </p>
                 <div style="display:flex;gap:12px;justify-content:center;">
-                    <button onclick="document.getElementById('deleteEmpModal').remove()" style="padding:12px 28px;border-radius:10px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;font-size:14px;font-weight:600;color:#374151;">Бекор</button>
+                    <button onclick="document.getElementById('deleteEmpModal').remove()" style="padding:12px 28px;border-radius:10px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;font-size:14px;font-weight:600;color:#374151;">Бекор қилиш</button>
                     <button id="confirmEmpDeleteBtn" onclick="Dashboard.executeDeleteEmployee('${empId}')" style="padding:12px 28px;border-radius:10px;border:none;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;cursor:pointer;font-size:14px;font-weight:700;">🗑️ Ҳа, ўчириш</button>
                 </div>
             </div>`;
@@ -275,16 +281,20 @@ const Dashboard = {
         try {
             await API.deleteEmployee(empId);
             document.getElementById('deleteEmpModal')?.remove();
+            Employees.closeModal();
             document.getElementById('emp-row-' + empId)?.remove();
+            
             const toast = document.createElement('div');
             toast.style.cssText = 'position:fixed;bottom:28px;right:28px;z-index:99999;padding:14px 22px;border-radius:14px;font-weight:700;background:linear-gradient(135deg,#166534,#16a34a);color:#fff;font-size:14px;box-shadow:0 8px 24px rgba(22,163,74,0.4);';
-            toast.textContent = "✅ Ходим ўчирилди!";
+            toast.textContent = "✅ Ходим ва унга тегишли барча маълумотлар базадан ўчирилди!";
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3500);
+
             this.loadStats();
+            this.loadEmployees(this.currentPage);
         } catch (e) {
             document.getElementById('deleteEmpModal')?.remove();
-            alert('Xato: ' + e.message);
+            alert('Хатолик: ' + e.message);
         }
     }
 };
