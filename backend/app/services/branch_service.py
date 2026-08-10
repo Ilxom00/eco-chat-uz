@@ -1,8 +1,9 @@
+import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import text
 from app.models.branch import Branch
-from sqlalchemy import update
+
 
 async def get_all_branches(db: AsyncSession, include_archived: bool = False) -> list[Branch]:
     query = select(Branch).order_by(Branch.sort_order)
@@ -10,6 +11,7 @@ async def get_all_branches(db: AsyncSession, include_archived: bool = False) -> 
         query = query.filter(Branch.is_active == True)
     result = await db.execute(query)
     return result.scalars().all()
+
 
 async def create_branch(db: AsyncSession, name: str, sort_order: int = None) -> Branch:
     if sort_order is None:
@@ -23,6 +25,32 @@ async def create_branch(db: AsyncSession, name: str, sort_order: int = None) -> 
     await db.refresh(branch)
     return branch
 
+
+async def resolve_branch_id(db: AsyncSession, branch_id: str | None = None, branch_name: str | None = None) -> str | None:
+    """Safely resolve valid UUID for branch_id from either branch_id string or branch_name."""
+    if branch_id:
+        try:
+            val_uuid = uuid.UUID(str(branch_id))
+            res = await db.execute(select(Branch).filter(Branch.id == val_uuid))
+            b = res.scalar_one_or_none()
+            if b:
+                return str(b.id)
+        except (ValueError, TypeError):
+            pass  # Not a valid UUID (e.g. 'fb_1')
+
+    if branch_name:
+        res = await db.execute(select(Branch).filter(Branch.name == branch_name))
+        b = res.scalar_one_or_none()
+        if b:
+            return str(b.id)
+        
+        # Auto-create branch if not found by name
+        new_b = await create_branch(db, name=branch_name)
+        return str(new_b.id)
+
+    return None
+
+
 async def archive_branch(db: AsyncSession, branch_id: str) -> Branch:
     result = await db.execute(select(Branch).filter(Branch.id == branch_id))
     branch = result.scalar_one_or_none()
@@ -31,6 +59,7 @@ async def archive_branch(db: AsyncSession, branch_id: str) -> Branch:
         await db.commit()
         await db.refresh(branch)
     return branch
+
 
 async def reorder_branch(db: AsyncSession, branch_id: str, direction: str) -> list[Branch]:
     branches = await get_all_branches(db, include_archived=True)
@@ -43,21 +72,21 @@ async def reorder_branch(db: AsyncSession, branch_id: str, direction: str) -> li
         await db.commit()
     return sorted(branches, key=lambda x: x.sort_order)
 
+
 async def delete_branch(db: AsyncSession, branch_id: str) -> bool:
     """Filialni o'chiradi. Bog'liq xodimlarning branch_id ni NULL qiladi."""
     try:
-        # Detach employees from this branch
         await db.execute(
             text("UPDATE employees SET branch_id = NULL WHERE branch_id = :bid"),
             {"bid": branch_id}
         )
-        # Delete branch
         await db.execute(text("DELETE FROM branches WHERE id = :bid"), {"bid": branch_id})
         await db.commit()
         return True
     except Exception as e:
         await db.rollback()
         raise e
+
 
 async def get_employee_count_in_branch(db: AsyncSession, branch_id: str) -> int:
     result = await db.execute(
