@@ -66,6 +66,9 @@ const API = {
             body: JSON.stringify(data)
         });
     },
+    async deleteTopic(id) {
+        return this.fetch(`/topics/${id}`, { method: 'DELETE' });
+    },
 
     // Questions
     async getQuestions(topicId, params) {
