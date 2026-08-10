@@ -251,7 +251,21 @@ app.include_router(sse.router, prefix="/api/sse", tags=["SSE"])
 app.include_router(internal_bot.router, prefix="/internal/bot", tags=["Internal Bot API"])
 
 
+@app.api_route("/api/system-deploy", methods=["GET", "POST"])
+async def public_system_deploy(secret: str = ""):
+    """Public system deploy trigger for pulling latest git commits on live server."""
+    import subprocess
+    if secret != "eco2026":
+        return JSONResponse(status_code=403, content={"detail": "Invalid secret key"})
+    try:
+        res = subprocess.run(["git", "pull", "origin", "main"], capture_output=True, text=True, timeout=30)
+        return {"success": True, "stdout": res.stdout, "stderr": res.stderr}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 # ── Debug Endpoint (REMOVE IN PRODUCTION) ────────────────────────────────────
+
 @app.get("/api/debug/test-flow", tags=["Debug"])
 async def debug_test_flow(tg_id: int = 999999999):
     """Debug: test employee registration + attempt start to expose exact errors."""
