@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Бошқарув панели - eco-chat.uz</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/forms.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="assets/logo_tree.jpg" alt="Logo" class="sidebar-logo">
+
+                <span class="sidebar-brand">eco-chat.uz</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#dashboard" class="nav-item active" data-target="dashboard">📊 Умумий</a>
+                <a href="#topics" class="nav-item" data-target="topics">📝 Тест Киритиш</a>
+                <a href="#reports" class="nav-item" data-target="reports">📈 Ҳисоботлар</a>
+                <a href="#branches" class="nav-item" data-target="branches">🏢 Филиаллар</a>
+                <a href="#audit" class="nav-item" data-target="audit">📋 Audit Log</a>
+                <a href="#settings" class="nav-item" data-target="settings">⚙️ Созламалар</a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="admin-info">
+                    <div class="avatar">SA</div>
+                    <span>Super Admin</span>
+                </div>
+                <button id="logoutBtn" class="btn-logout">🚪 Чиқиш</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <h1 id="pageTitle">Умумий</h1>
+                <div class="live-indicator">
+                    <span class="pulse-dot"></span> Jonli
+                </div>
+            </header>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="page-section active">
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-icon">👥</div>
+                        <div class="kpi-info">
+                            <h3>Жами ходимлар</h3>
+                            <div class="kpi-value" id="kpi-total-employees">0</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">▶️</div>
+                        <div class="kpi-info">
+                            <h3>Тестни бошлаганлар</h3>
+                            <div class="kpi-value" id="kpi-started">0</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">✅</div>
+                        <div class="kpi-info">
+                            <h3>Тестни тугатганлар</h3>
+                            <div class="kpi-value" id="kpi-completed">0</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon active">🔄</div>
+                        <div class="kpi-info">
+                            <h3>Ҳозир тест ечаётганлар</h3>
+                            <div class="kpi-value" id="kpi-active">0</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">📊</div>
+                        <div class="kpi-info">
+                            <h3>1-уриниш ўртача %</h3>
+                            <div class="kpi-value" id="kpi-avg1">0%</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">📈</div>
+                        <div class="kpi-info">
+                            <h3>2-уриниш ўртача %</h3>
+                            <div class="kpi-value" id="kpi-avg2">0%</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card accent">
+                        <div class="kpi-icon">🏅</div>
+                        <div class="kpi-info">
+                            <h3>Билим ўсиши</h3>
+                            <div class="kpi-value" id="kpi-growth">+0%</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">📋</div>
+                        <div class="kpi-info">
+                            <h3>Жами тугалланган тестлар</h3>
+                            <div class="kpi-value" id="kpi-total-tests">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container mt-4">
+                    <div class="table-header">
+                        <h2>Ходимлар рейтинги</h2>
+                        <div class="table-actions">
+                            <input type="text" class="form-control input-sm" placeholder="Қидириш..." id="empSearch">
+                        </div>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>№</th>
+                                <th>Ф.И.Ш.</th>
+                                <th>Филиал</th>
+                                <th>Мавзу</th>
+                                <th>1-уриниш</th>
+                                <th>2-уриниш</th>
+                                <th>Фарқ</th>
+                                <th>Ҳолат</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employeesTableBody">
+                            <!-- Rows via JS -->
+                        </tbody>
+                    </table>
+                    <div class="pagination" id="empPagination"></div>
+                </div>
+            </section>
+
+            <!-- Topics Section -->
+            <section id="topics" class="page-section" style="display:none;">
+                <div class="section-header">
+                    <h2>Мавзулар</h2>
+                    <button class="btn btn-primary" onclick="Topics.showCreateModal()">+ Янги мавзу</button>
+                </div>
+                <div id="topicsList" class="topics-grid">
+                    <!-- Topics via JS -->
+                </div>
+            </section>
+            
+            <!-- Other Sections... -->
+            <section id="reports" class="page-section" style="display:none;">
+                <h2>Ҳисоботлар</h2>
+                <!-- Reports via JS -->
+            </section>
+            
+            <section id="branches" class="page-section" style="display:none;">
+                <h2>Филиаллар</h2>
+                <!-- Branches via JS -->
+            </section>
+            
+            <section id="audit" class="page-section" style="display:none;">
+                <h2>Audit Log</h2>
+                <!-- Audit via JS -->
+            </section>
+            
+            <section id="settings" class="page-section" style="display:none;">
+                <h2>Созламалар</h2>
+                <!-- Settings via JS -->
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="employeeModal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3>Ходим маълумотлари</h3>
+                <button class="close-modal">×</button>
+            </div>
+            <div class="modal-body" id="employeeModalBody">
+                <!-- Data via JS -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/sse.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/topics.js"></script>
+    <script src="js/questions.js"></script>
+    <script src="js/branches.js"></script>
+    <script src="js/reports.js"></script>
+    <script src="js/employees.js"></script>
+    <script src="js/audit.js"></script>
+    
+    <script>
+        // Simple router
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                document.querySelectorAll('.page-section').forEach(sec => sec.style.display = 'none');
+                
+                item.classList.add('active');
+                const target = item.getAttribute('data-target');
+                document.getElementById(target).style.display = 'block';
+                document.getElementById('pageTitle').textContent = item.textContent.replace(/[^\А-Яа-яA-Za-z\s]/g, '').trim();
+            });
+        });
+    </script>
+</body>
+</html>
