@@ -4,7 +4,7 @@ from app.database import get_db
 from app.api.deps import get_current_admin
 from app.services import topic_service
 
-router = APIRouter(prefix="/topics", tags=["topics"], dependencies=[Depends(get_current_admin)])
+router = APIRouter(tags=["topics"], dependencies=[Depends(get_current_admin)])
 
 @router.get("/")
 async def list_topics(db: AsyncSession = Depends(get_db)):
