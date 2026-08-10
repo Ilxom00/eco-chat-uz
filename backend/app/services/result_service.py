@@ -15,17 +15,35 @@ async def get_employee_all_results(db: AsyncSession, employee_id: str) -> list[d
 
 async def get_dashboard_stats(db: AsyncSession) -> dict:
     try:
+        # Real employee count
         total_employees = (await db.execute(select(func.count()).select_from(Employee))).scalar() or 0
-        started = (await db.execute(select(func.count()).select_from(TestAttempt))).scalar() or 0
-        completed = (await db.execute(
-            select(func.count()).select_from(TestAttempt).where(TestAttempt.status == "COMPLETED")
-        )).scalar() or 0
-        active = (await db.execute(
-            select(func.count()).select_from(TestAttempt).where(TestAttempt.status == "IN_PROGRESS")
-        )).scalar() or 0
-        total_tests = (await db.execute(
-            select(func.count()).select_from(EmployeeTopicAssignment).where(EmployeeTopicAssignment.status == "COMPLETED")
-        )).scalar() or 0
+
+        # Tests started by existing employees
+        started = (await db.execute(text("""
+            SELECT COUNT(DISTINCT ta.id) FROM test_attempts ta
+            JOIN employees e ON ta.employee_id = e.id
+        """))).scalar() or 0
+
+        # Tests completed by existing employees
+        completed = (await db.execute(text("""
+            SELECT COUNT(DISTINCT ta.id) FROM test_attempts ta
+            JOIN employees e ON ta.employee_id = e.id
+            WHERE ta.status = 'COMPLETED'
+        """))).scalar() or 0
+
+        # Currently active = IN_PROGRESS AND started within last 3 hours AND employee exists
+        active = (await db.execute(text("""
+            SELECT COUNT(DISTINCT ta.id) FROM test_attempts ta
+            JOIN employees e ON ta.employee_id = e.id
+            WHERE ta.status = 'IN_PROGRESS'
+            AND ta.started_at > NOW() - INTERVAL '3 hours'
+        """))).scalar() or 0
+
+        total_tests = (await db.execute(text("""
+            SELECT COUNT(*) FROM employee_topic_assignments eta
+            JOIN employees e ON eta.employee_id = e.id
+            WHERE eta.status = 'COMPLETED'
+        """))).scalar() or 0
 
         # Per-topic averages
         topic_stats_raw = await db.execute(text("""
