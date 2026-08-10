@@ -1,20 +1,38 @@
+import uuid
 import logging
 from typing import Optional, Dict, Any, List
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
+from sqlalchemy.future import select
 from app.database import AsyncSessionLocal, engine
 from app.services import employee_service, topic_service, test_engine
 from app.seeds.seed import seed_topics_and_questions
+from app.models.branch import Branch
 
 logger = logging.getLogger(__name__)
+
+
+async def _get_branch_name(db: AsyncSession, branch_id) -> str:
+    """Safely get branch name by UUID using ORM."""
+    if not branch_id:
+        return "—"
+    try:
+        bid = branch_id if isinstance(branch_id, uuid.UUID) else uuid.UUID(str(branch_id))
+        result = await db.execute(select(Branch).filter(Branch.id == bid))
+        branch = result.scalar_one_or_none()
+        return branch.name if branch else "—"
+    except (ValueError, TypeError):
+        return "—"
 
 
 class BotAPIClient:
 
     async def get_branches(self) -> List[Dict[str, Any]]:
         async with AsyncSessionLocal() as db:
-            rows = (await db.execute(text("SELECT id, name FROM branches WHERE is_active = true ORDER BY sort_order, name"))).fetchall()
-            return [{"id": str(r[0]), "name": r[1]} for r in rows]
+            result = await db.execute(
+                select(Branch).filter(Branch.is_active == True).order_by(Branch.sort_order, Branch.name)
+            )
+            branches = result.scalars().all()
+            return [{"id": str(b.id), "name": b.name} for b in branches]
 
     async def register_employee(self, telegram_user_id: int, full_name: str, branch_name_or_id: str, phone: Optional[str] = None) -> Dict[str, Any]:
         async with AsyncSessionLocal() as db:
@@ -25,18 +43,7 @@ class BotAPIClient:
                 branch_name_or_id=branch_name_or_id,
                 phone=phone
             )
-            # Get branch name from DB
-            branch_name = "—"
-            if emp.branch_id:
-                try:
-                    row = (await db.execute(
-                        text("SELECT name FROM branches WHERE id = :bid"),
-                        {"bid": str(emp.branch_id)}
-                    )).fetchone()
-                    if row:
-                        branch_name = row[0]
-                except Exception:
-                    pass
+            branch_name = await _get_branch_name(db, emp.branch_id)
             return {
                 "id": str(emp.id),
                 "full_name": emp.full_name,
@@ -48,17 +55,7 @@ class BotAPIClient:
             emp = await employee_service.get_employee_by_telegram_id(db, telegram_user_id)
             if not emp:
                 return None
-            branch_name = "—"
-            if emp.branch_id:
-                try:
-                    row = (await db.execute(
-                        text("SELECT name FROM branches WHERE id = :bid"),
-                        {"bid": str(emp.branch_id)}
-                    )).fetchone()
-                    if row:
-                        branch_name = row[0]
-                except Exception:
-                    pass
+            branch_name = await _get_branch_name(db, emp.branch_id)
             return {
                 "id": str(emp.id),
                 "full_name": emp.full_name,
@@ -108,7 +105,7 @@ class BotAPIClient:
                     full_name=f"Ходим #{telegram_user_id}",
                     branch_name_or_id=None
                 )
-            
+
             try:
                 redis_client = None
                 try:
@@ -116,7 +113,7 @@ class BotAPIClient:
                     redis_client = _rc
                 except Exception:
                     pass
-                
+
                 attempt = await test_engine.start_attempt(db, redis_client, str(emp.id), str(topic_id), attempt_number)
                 first_q = await test_engine.get_current_question_full(db, str(attempt.id))
                 return {"attempt_id": str(attempt.id), "first_question": first_q}
