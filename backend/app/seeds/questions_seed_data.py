@@ -1,5 +1,4 @@
-# AUTO-GENERATED from docx files. Do not edit manually.
-# 4 topics, 115 questions total.
+# AUTO-GENERATED. Total: 4 topics, 114 questions.
 
 TOPICS_AND_QUESTIONS = [
     {
@@ -9,151 +8,136 @@ TOPICS_AND_QUESTIONS = [
         "questions": [
             {
                 "text": 'Давлат экологик экспертизасининг асосий вазифаси қайси?',
-                "correct": 'B',
                 "answers": [
-                    {"text": 'Объектнинг иқтисодий даромадини ҳисоблаш', "label": 'A', "sort_order": 1, "is_correct": False},
-                    {"text": 'Фаолиятнинг экологик талабларга мувофиқлигини аниқлаш', "label": 'B', "sort_order": 2, "is_correct": True},
-                    {"text": 'Корхона ходимлари сонини белгилаш', "label": 'C', "sort_order": 3, "is_correct": False},
-                    {"text": 'Қурилиш материаллари нархини тасдиқлаш', "label": 'D', "sort_order": 4, "is_correct": False},
+                    {"text": 'Объектнинг иқтисодий даромадини ҳисоблаш;', "label": 'A', "sort_order": 1, "is_correct": False},
+                    {"text": 'Фаолиятнинг экологик талабларга мувофиқлигини аниқлаш;', "label": 'B', "sort_order": 2, "is_correct": True},
+                    {"text": 'Корхона ходимлари сонини белгилаш;', "label": 'C', "sort_order": 3, "is_correct": False},
+                    {"text": 'Қурилиш материаллари нархини тасдиқлаш.', "label": 'D', "sort_order": 4, "is_correct": False},
                 ],
             },
             {
                 "text": 'Давлат экологик экспертизасининг объекти ҳисобланмайдиган вариантни топинг.',
-                "correct": 'C',
                 "answers": [
-                    {"text": 'Лойиҳаолди ҳужжатлари', "label": 'A', "sort_order": 1, "is_correct": False},
-                    {"text": 'Ер участкаси танлаш материаллари', "label": 'B', "sort_order": 2, "is_correct": False},
-                    {"text": 'Корхона ходимларининг меҳнат таътили жадвали', "label": 'C', "sort_order": 3, "is_correct": True},
+                    {"text": 'Лойиҳаолди ҳужжатлари;', "label": 'A', "sort_order": 1, "is_correct": False},
+                    {"text": 'Ер участкаси танлаш материаллари;', "label": 'B', "sort_order": 2, "is_correct": False},
+                    {"text": 'Корхона ходимларининг меҳнат таътили жадвали;', "label": 'C', "sort_order": 3, "is_correct": True},
                     {"text": 'Янги чиқиндини қайта ишлаш технологияси', "label": 'D', "sort_order": 4, "is_correct": False},
                 ],
             },
             {
                 "text": 'I тоифадаги объектнинг лойиҳа ҳужжатларини қайси орган кўриб чиқади?',
-                "correct": 'C',
                 "answers": [
-                    {"text": 'Туман ҳокимлиги', "label": 'A', "sort_order": 1, "is_correct": False},
-                    {"text": 'Ҳудудий санитария органи', "label": 'B', "sort_order": 2, "is_correct": False},
-                    {"text": 'Давлат экологик экспертизаси маркази', "label": 'C', "sort_order": 3, "is_correct": True},
+                    {"text": 'Туман ҳокимлиги;', "label": 'A', "sort_order": 1, "is_correct": False},
+                    {"text": 'Ҳудудий санитария органи;', "label": 'B', "sort_order": 2, "is_correct": False},
+                    {"text": 'Давлат экологик экспертизаси маркази;', "label": 'C', "sort_order": 3, "is_correct": True},
                     {"text": 'Буюртмачининг ўзи', "label": 'D', "sort_order": 4, "is_correct": False},
                 ],
             },
             {
                 "text": 'III тоифадаги объектнинг лойиҳа ҳужжатларини ким кўриб чиқади?',
-                "correct": 'A',
                 "answers": [
-                    {"text": 'Марказнинг ҳудудий филиали', "label": 'A', "sort_order": 1, "is_correct": True},
-                    {"text": 'Вазирлар Маҳкамаси', "label": 'B', "sort_order": 2, "is_correct": False},
-                    {"text": 'Қурилиш ташкилоти', "label": 'C', "sort_order": 3, "is_correct": False},
+                    {"text": 'Марказнинг ҳудудий филиали;', "label": 'A', "sort_order": 1, "is_correct": True},
+                    {"text": 'Вазирлар Маҳкамаси;', "label": 'B', "sort_order": 2, "is_correct": False},
+                    {"text": 'Қурилиш ташкилоти;', "label": 'C', "sort_order": 3, "is_correct": False},
                     {"text": 'Банк муассасаси', "label": 'D', "sort_order": 4, "is_correct": False},
                 ],
             },
             {
                 "text": 'II тоифадаги экологик нормативлар лойиҳаси қаерда кўриб чиқилади?',
-                "correct": 'B',
                 "answers": [
-                    {"text": 'Фақат Марказда', "label": 'A', "sort_order": 1, "is_correct": False},
-                    {"text": 'Марказнинг ҳудудий филиалида', "label": 'B', "sort_order": 2, "is_correct": True},
-                    {"text": 'Туман ҳокимлигида', "label": 'C', "sort_order": 3, "is_correct": False},
+                    {"text": 'Фақат Марказда;', "label": 'A', "sort_order": 1, "is_correct": False},
+                    {"text": 'Марказнинг ҳудудий филиалида;', "label": 'B', "sort_order": 2, "is_correct": True},
+                    {"text": 'Туман ҳокимлигида;', "label": 'C', "sort_order": 3, "is_correct": False},
                     {"text": 'Лойиҳа ташкилотида', "label": 'D', "sort_order": 4, "is_correct": False},
                 ],
             },
             {
                 "text": 'Эколог-эксперт учун энг кам узлуксиз иш стажи қанча?',
-                "correct": 'C',
                 "answers": [
-                    {"text": 'Бир йил', "label": 'A', "sort_order": 1, "is_correct": False},
-                    {"text": 'Икки йил', "label": 'B', "sort_order": 2, "is_correct": False},
-                    {"text": 'Уч йил', "label": 'C', "sort_order": 3, "is_correct": True},
+                    {"text": 'Бир йил;', "label": 'A', "sort_order": 1, "is_correct": False},
+                    {"text": 'Икки йил;', "label": 'B', "sort_order": 2, "is_correct": False},
+                    {"text": 'Уч йил;', "label": 'C', "sort_order": 3, "is_correct": True},
                     {"text": 'Беш йил', "label": 'D', "sort_order": 4, "is_correct": False},
                 ],
             },
             {
                 "text": 'Давлат экологик экспертизаси кимнинг маблағлари ҳисобидан ўтказилади?',
-                "correct": 'B',
                 "answers": [
-                    {"text": 'Фақат давлат бюджети ҳисобидан', "label": 'A', "sort_order": 1, "is_correct": False},
-                    {"text": 'Буюртмачи маблағлари ҳисобидан', "label": 'B', "sort_order": 2, "is_correct": True},
-                    {"text": 'Эколог-эксперт маблағлари ҳисобидан', "label": 'C', "sort_order": 3, "is_correct": False},
+                    {"text": 'Фақат давлат бюджети ҳисобидан;', "label": 'A', "sort_order": 1, "is_correct": False},
+                    {"text": 'Буюртмачи маблағлари ҳисобидан;', "label": 'B', "sort_order": 2, "is_correct": True},
+                    {"text": 'Эколог-эксперт маблағлари ҳисобидан;', "label": 'C', "sort_order": 3, "is_correct": False},
                     {"text": 'Жамоатчилик маблағлари ҳисобидан', "label": 'D', "sort_order": 4, "is_correct": False},
                 ],
             },
             {
                 "text": 'Атроф-муҳитга таъсир тушунчасига қайси омил киради?',
-                "correct": 'C',
                 "answers": [
-                    {"text": 'Фақат атмосфера ҳавосининг ифлосланиши', "label": 'A', "sort_order": 1, "is_correct": False},
-                    {"text": 'Фақат сувдан фойдаланиш', "label": 'B', "sort_order": 2, "is_correct": False},
-                    {"text": 'Инсон саломатлиги, табиат компонентлари ва уларнинг ўзаро боғлиқлигига таъсир', "label": 'C', "sort_order": 3, "is_correct": True},
+                    {"text": 'Фақат атмосфера ҳавосининг ифлосланиши;', "label": 'A', "sort_order": 1, "is_correct": False},
+                    {"text": 'Фақат сувдан фойдаланиш;', "label": 'B', "sort_order": 2, "is_correct": False},
+                    {"text": 'Инсон саломатлиги, табиат компонентлари ва уларнинг ўзаро боғлиқлигига таъсир;', "label": 'C', "sort_order": 3, "is_correct": True},
                     {"text": 'Фақат корхонанинг молиявий натижаси', "label": 'D', "sort_order": 4, "is_correct": False},
                 ],
             },
             {
                 "text": 'Давлат экологик экспертизаси хулосаси қандай аҳамиятга эга?',
-                "correct": 'B',
                 "answers": [
-                    {"text": 'Фақат тавсиявий аҳамиятга эга', "label": 'A', "sort_order": 1, "is_correct": False},
-                    {"text": 'Бажарилиши шарт бўлган юридик аҳамиятга эга', "label": 'B', "sort_order": 2, "is_correct": True},
-                    {"text": 'Фақат статистик маълумот ҳисобланади', "label": 'C', "sort_order": 3, "is_correct": False},
+                    {"text": 'Фақат тавсиявий аҳамиятга эга;', "label": 'A', "sort_order": 1, "is_correct": False},
+                    {"text": 'Бажарилиши шарт бўлган юридик аҳамиятга эга;', "label": 'B', "sort_order": 2, "is_correct": True},
+                    {"text": 'Фақат статистик маълумот ҳисобланади;', "label": 'C', "sort_order": 3, "is_correct": False},
                     {"text": 'Фақат лойиҳани ишлаб чиқувчи учун мажбурий', "label": 'D', "sort_order": 4, "is_correct": False},
                 ],
             },
             {
                 "text": 'Экологик экспертизанинг олдини олувчи хусусияти нимада?',
-                "correct": 'B',
                 "answers": [
-                    {"text": 'Зарар етказилгандан кейин жарима белгилашда', "label": 'A', "sort_order": 1, "is_correct": False},
-                    {"text": 'Фаолият бошланишидан олдин эҳтимолий таъсирни аниқлашда', "label": 'B', "sort_order": 2, "is_correct": True},
-                    {"text": 'Корхонанинг фойдасини оширишда', "label": 'C', "sort_order": 3, "is_correct": False},
+                    {"text": 'Зарар етказилгандан кейин жарима белгилашда;', "label": 'A', "sort_order": 1, "is_correct": False},
+                    {"text": 'Фаолият бошланишидан олдин эҳтимолий таъсирни аниқлашда;', "label": 'B', "sort_order": 2, "is_correct": True},
+                    {"text": 'Корхонанинг фойдасини оширишда;', "label": 'C', "sort_order": 3, "is_correct": False},
                     {"text": 'Қурилиш муддатини қисқартиришда', "label": 'D', "sort_order": 4, "is_correct": False},
                 ],
             },
             {
                 "text": 'Экологик нормативлар нималар асосида ишлаб чиқилади?',
-                "correct": 'A',
                 "answers": [
-                    {"text": 'Ифлослантирувчи манбаларни хатловдан ўтказиш натижалари асосида', "label": 'A', "sort_order": 1, "is_correct": True},
-                    {"text": 'Фақат буюртмачининг хоҳиши асосида', "label": 'B', "sort_order": 2, "is_correct": False},
-                    {"text": 'Корхона реклама материаллари асосида', "label": 'C', "sort_order": 3, "is_correct": False},
+                    {"text": 'Ифлослантирувчи манбаларни хатловдан ўтказиш натижалари асосида;', "label": 'A', "sort_order": 1, "is_correct": True},
+                    {"text": 'Фақат буюртмачининг хоҳиши асосида;', "label": 'B', "sort_order": 2, "is_correct": False},
+                    {"text": 'Корхона реклама материаллари асосида;', "label": 'C', "sort_order": 3, "is_correct": False},
                     {"text": 'Фақат ишчилар сони асосида', "label": 'D', "sort_order": 4, "is_correct": False},
                 ],
             },
             {
                 "text": 'Вазиятлар харитасида қайси маълумот акс эттирилади?',
-                "correct": 'B',
                 "answers": [
-                    {"text": 'Корхона ходимларининг иш ҳақи', "label": 'A', "sort_order": 1, "is_correct": False},
-                    {"text": 'Объект координаталари ва унга туташ ҳудудлар', "label": 'B', "sort_order": 2, "is_correct": True},
-                    {"text": 'Буюртмачининг солиқ ҳисоботи', "label": 'C', "sort_order": 3, "is_correct": False},
+                    {"text": 'Корхона ходимларининг иш ҳақи;', "label": 'A', "sort_order": 1, "is_correct": False},
+                    {"text": 'Объект координаталари ва унга туташ ҳудудлар;', "label": 'B', "sort_order": 2, "is_correct": True},
+                    {"text": 'Буюртмачининг солиқ ҳисоботи;', "label": 'C', "sort_order": 3, "is_correct": False},
                     {"text": 'Қурилиш материалларининг нархи', "label": 'D', "sort_order": 4, "is_correct": False},
                 ],
             },
             {
                 "text": 'Янги чиқиндиларни зарарсизлантириш технологияси бўйича ҳужжатларни ким кўриб чиқади?',
-                "correct": 'B',
                 "answers": [
-                    {"text": 'Ҳудудий филиал', "label": 'A', "sort_order": 1, "is_correct": False},
-                    {"text": 'Давлат экологик экспертизаси маркази', "label": 'B', "sort_order": 2, "is_correct": True},
-                    {"text": 'Фақат ишлаб чиқарувчи', "label": 'C', "sort_order": 3, "is_correct": False},
+                    {"text": 'Ҳудудий филиал;', "label": 'A', "sort_order": 1, "is_correct": False},
+                    {"text": 'Давлат экологик экспертизаси маркази;', "label": 'B', "sort_order": 2, "is_correct": True},
+                    {"text": 'Фақат ишлаб чиқарувчи;', "label": 'C', "sort_order": 3, "is_correct": False},
                     {"text": 'Тижорат банки', "label": 'D', "sort_order": 4, "is_correct": False},
                 ],
             },
             {
                 "text": 'Давлат экологик экспертизасида қайси ёндашув устувор?',
-                "correct": 'A',
                 "answers": [
-                    {"text": 'Экологик зарарнинг олдини олиш', "label": 'A', "sort_order": 1, "is_correct": True},
-                    {"text": 'Зарар содир бўлгандан кейин уни қайд қилиш', "label": 'B', "sort_order": 2, "is_correct": False},
-                    {"text": 'Фақат иқтисодий самарани баҳолаш', "label": 'C', "sort_order": 3, "is_correct": False},
+                    {"text": 'Экологик зарарнинг олдини олиш;', "label": 'A', "sort_order": 1, "is_correct": True},
+                    {"text": 'Зарар содир бўлгандан кейин уни қайд қилиш;', "label": 'B', "sort_order": 2, "is_correct": False},
+                    {"text": 'Фақат иқтисодий самарани баҳолаш;', "label": 'C', "sort_order": 3, "is_correct": False},
                     {"text": 'Фақат қурилиш ишларини тезлаштириш', "label": 'D', "sort_order": 4, "is_correct": False},
                 ],
             },
             {
                 "text": 'Экологик чора-тадбирларни баҳолашда эксперт нимани текширади?',
-                "correct": 'B',
                 "answers": [
-                    {"text": 'Фақат чора-тадбирнинг номини', "label": 'A', "sort_order": 1, "is_correct": False},
-                    {"text": 'Унинг етарлилиги, асосланганлиги ва экологик самарасини', "label": 'B', "sort_order": 2, "is_correct": True},
-                    {"text": 'Фақат буюртмачининг розилигини', "label": 'C', "sort_order": 3, "is_correct": False},
+                    {"text": 'Фақат чора-тадбирнинг номини;', "label": 'A', "sort_order": 1, "is_correct": False},
+                    {"text": 'Унинг етарлилиги, асосланганлиги ва экологик самарасини;', "label": 'B', "sort_order": 2, "is_correct": True},
+                    {"text": 'Фақат буюртмачининг розилигини;', "label": 'C', "sort_order": 3, "is_correct": False},
                     {"text": 'Фақат лойиҳанинг ташқи кўринишини', "label": 'D', "sort_order": 4, "is_correct": False},
                 ],
             },
@@ -166,7 +150,6 @@ TOPICS_AND_QUESTIONS = [
         "questions": [
             {
                 "text": 'Давлат экологик экспертизасини ўтказиш учун ариза умумий тартибда қаердан берилади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Туман ҳокимлиги орқали', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Ягона интерактив давлат хизматлари портали орқали', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -176,7 +159,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Электрон ариза кимнинг ЭРИси билан тасдиқланади?',
-                "correct": 'C',
                 "answers": [
                     {"text": 'Инспекторнинг', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Эколог-экспертнинг', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -186,7 +168,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Қайси маълумот аризанинг буюртмачи ҳақидаги бўлимига кирмайди?',
-                "correct": 'D',
                 "answers": [
                     {"text": 'СТИР', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'ИФУТ коди', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -196,7 +177,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Объектнинг жойлашуви аризада қандай маълумот билан белгиланади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Фақат почта индекси билан', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Шимолий кенглик ва шарқий узунлик билан', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -206,7 +186,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Аризада атмосферага чиқариладиган моддалар миқдори қайси бирликларда кўрсатилади?',
-                "correct": 'C',
                 "answers": [
                     {"text": 'м³/кун ва м³/йил', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'мг/литр ва г/соат', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -216,7 +195,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Сувдан фойдаланиш кўрсаткичлари қайси бирликларда берилади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'г/сек ва т/йил', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'м³/кун ва м³/йил', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -226,7 +204,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Янги объект учун дастлабки босқичда қайси ҳужжат тайёрланади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Фақат чиқиндилар лимити', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Атроф-муҳитга таъсирни баҳолаш тўғрисидаги ариза лойиҳаси', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -236,7 +213,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Атроф-муҳитга таъсир тўғрисидаги баёнот қачон талаб этилади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Ҳар қандай ҳолатда автоматик равишда', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Қўшимча тадқиқот ва асослашлар зарурлиги аниқланганда', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -246,7 +222,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Атроф-муҳитга таъсир тўғрисидаги баёнот қачонгача тақдим этилади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Объект бузиб ташланганидан кейин', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Техник-иқтисодий асосланиш тасдиқланишидан олдин', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -256,7 +231,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Экологик оқибатлар тўғрисидаги баёнот қачон тайёрланади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Ер танлашдан олдин', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Объект фойдаланишга қабул қилинишидан олдин', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -266,7 +240,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Амалдаги объект учун асосан қайси ҳужжат тақдим этилади?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Экологик нормативлар лойиҳаси', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Фақат қурилиш сметаси', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -276,7 +249,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Қайси ҳолатда атроф-муҳитга таъсир қайта баҳоланади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Корхона раҳбари алмашганда', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Объект реконструкция ёки модернизация қилинганда', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -286,7 +258,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Махсус ҳуқуқий режимга эга объект ҳужжатлари қандай шаклда тақдим этилади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Очиқ ижтимоий тармоқ орқали', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Қоғоз шаклида тўғридан-тўғри ваколатли эксперт бўлинмасига', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -296,7 +267,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Вазиятлар харитаси қачон шакллантирилади?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Атроф-муҳитга таъсирни баҳолаш материаллари келиб тушганда', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Тўлов амалга оширилгандан беш йил кейин', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -306,7 +276,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Вазиятлар харитасини ким жойига чиқиб текширади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Тижорат банки ходими', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Туман ёки шаҳар экологик инспектори', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -316,7 +285,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'I тоифадаги объект вазиятлар харитасини кўриб чиқиш муддати қанча?',
-                "correct": 'C',
                 "answers": [
                     {"text": '3 иш куни', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": '5 иш куни', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -326,7 +294,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'II тоифадаги объект вазиятлар харитасини кўриб чиқиш муддати қанча?',
-                "correct": 'B',
                 "answers": [
                     {"text": '3 иш куни', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": '5 иш куни', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -336,7 +303,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'III тоифадаги объект вазиятлар харитасини кўриб чиқиш муддати қанча?',
-                "correct": 'A',
                 "answers": [
                     {"text": '3 иш куни', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": '5 иш куни', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -346,7 +312,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Инспектор белгиланган муддатда харитани ўрганмаса нима бўлади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Ариза автоматик рад этилади', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Харита ижобий тасдиқланган ҳисобланади', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -356,7 +321,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Қайси ҳужжат учун вазиятлар харитаси талаб этилмайди?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Янги объектнинг таъсирни баҳолаш материали', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Экологик нормативлар лойиҳаси', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -366,7 +330,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Марказ ариза ва ҳужжатларни дастлабки кўриб чиқиш учун қанча муддатга эга?',
-                "correct": 'C',
                 "answers": [
                     {"text": '3 иш куни', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": '5 иш куни', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -376,7 +339,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Қуйидагилардан қайси бири аризани рад этиш асоси ҳисобланади?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Ҳужжатларда нотўғри маълумот бўлиши', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Буюртмачининг электрон почтаси мавжудлиги', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -386,7 +348,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Камчиликларни бартараф этиш учун буюртмачига қанча муддат берилади?',
-                "correct": 'C',
                 "answers": [
                     {"text": '3 кун', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": '5 кун', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -396,7 +357,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Хабарномада кўрсатилмаган янги асос бўйича аризани рад этиш мумкинми?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Ҳа, ҳар қандай ҳолатда', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Йўқ, бунга йўл қўйилмайди', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -406,7 +366,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Жамоатчилик эшитуви зарурати аниқланганда нима қилинади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Дарҳол ижобий хулоса берилади', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Ариза рад этилади ва эшитув ўтказилгандан кейин қайта тақдим этилади', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -416,7 +375,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Ҳужжатлар тўлиқ ва тўғри бўлганда буюртмачига нима юборилади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Суд чақируви', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Оферта', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -426,7 +384,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Қайси ҳолат майдон кўрсаткичларида номувофиқликни билдиради?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Таркибий майдонлар йиғиндиси умумий ер майдонидан ошиб кетса', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Кўкаламзорлаштириш майдони кўрсатилса', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -436,7 +393,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Қайси ҳолат сув баланси қайта текширилишини талаб қилади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Сув олиш 100 м³/кун, оқова 70 м³/кун бўлса', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Қўшимча манбасиз сув олиш 100 м³/кун, оқова 150 м³/кун бўлса', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -446,7 +402,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Жамоатчилик эшитувининг асосий вазифаси нима?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Фақат иштирокчилар сонини қайд этиш', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Жамоатчиликка ахборот бериш ва асосланган фикрларни қарорларда ҳисобга олиш', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -456,7 +411,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Аризадаги маълумотларнинг тўғрилиги учун биринчи навбатда ким масъул?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Аризани ўз ЭРИси билан тасдиқлаган буюртмачи', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Банк ходими', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -468,12 +422,11 @@ TOPICS_AND_QUESTIONS = [
     },
     {
         "short_name": '3-mavzu',
-        "full_name": "Davlat ekologik ekspertizasini o'tkazish va ekspert",
+        "full_name": "Davlat EE ni o'tkazish va ekspert",
         "sequence_order": 3,
         "questions": [
             {
                 "text": 'Ҳужжатлар белгиланган тартибда тақдим этилгандан кейин буюртмачига нима юборилади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Қурилиш рухсатномаси', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Оферта', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -483,7 +436,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Тўлов бўйича инвойс қачон шакллантирилади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Ариза тўлдирилишидан олдин', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Буюртмачи офертани қабул қилганидан кейин', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -493,7 +445,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Давлат экологик экспертизаси учун тўлов қандай амалга оширилади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Хулоса берилганидан кейин', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Электрон тўлов тизими орқали олдиндан', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -503,7 +454,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Буюртмачи офертани қабул қилганидан кейин тўловни қанча муддатда амалга ошириши керак?',
-                "correct": 'D',
                 "answers": [
                     {"text": '7 кун', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": '10 кун', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -513,7 +463,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Тўлов 30 кун ичида амалга оширилмаса нима бўлади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Ижобий хулоса автоматик берилади', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Ариза автоматик рад этилади', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -523,7 +472,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Давлат экологик экспертизасининг умумий муддати қанча?',
-                "correct": 'C',
                 "answers": [
                     {"text": '7 иш куни', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": '10 иш куни', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -533,7 +481,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Экспертиза муддати қачондан ҳисобланади?',
-                "correct": 'C',
                 "answers": [
                     {"text": 'Ариза тайёрланган кундан', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Оферта юборилган кундан', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -543,7 +490,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Экспертиза муддатини узайтириш учун кимнинг қарори талаб қилинади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Буюртмачи раҳбарининг', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Экология қўмитаси раисининг', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -553,7 +499,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Экспертиза муддати кўпи билан қанчага узайтирилиши мумкин?',
-                "correct": 'C',
                 "answers": [
                     {"text": '10 кунга', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Бир йилга', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -563,7 +508,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Давлат экологик экспертизасини ким ўтказади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Фақат буюртмачи', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Эколог-эксперт', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -573,7 +517,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Эколог-экспертнинг энг кам узлуксиз иш стажи қанча?',
-                "correct": 'C',
                 "answers": [
                     {"text": 'Бир йил', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Икки йил', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -583,7 +526,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Эксперт текширувининг асосий йўналиши қайси?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Корхонанинг реклама стратегияси', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Материалларнинг экологик қонунчиликка мувофиқлиги', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -593,7 +535,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Маълумотнинг ишончлилиги нимани англатади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Матннинг катта ҳажмда бўлишини', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Маълумотнинг ҳақиқий, текшириладиган ва асосланган бўлишини', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -603,7 +544,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Маълумотнинг тўлиқлиги нимани англатади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Фақат ижобий маълумотлар берилишини', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Барча муҳим таъсирлар ва манбалар қамраб олинишини', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -612,18 +552,7 @@ TOPICS_AND_QUESTIONS = [
                 ],
             },
             {
-                "text": 'Қайси формула экологик хавфни соддалаштириб ифодалайди?',
-                "correct": 'A',
-                "answers": [
-                    {"text": '', "label": 'A', "sort_order": 1, "is_correct": True},
-                    {"text": '', "label": 'B', "sort_order": 2, "is_correct": False},
-                    {"text": '', "label": 'C', "sort_order": 3, "is_correct": False},
-                    {"text": '', "label": 'D', "sort_order": 4, "is_correct": False},
-                ],
-            },
-            {
                 "text": 'Қолдиқ хавф нима?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Ҳужжатдаги имло хатоси', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Барча муҳофаза чораларидан кейин сақланадиган хавф', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -633,7 +562,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Экологик чоранинг етарлилигини қайси кўрсаткич тасдиқламайди?',
-                "correct": 'D',
                 "answers": [
                     {"text": 'Техник асосланганлик', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Ўлчанадиган натижа', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -643,7 +571,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Эксперт иссиқхона газлари бўйича нимани текширади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Фақат объект номини', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Газлар миқдори ва углерод нейтраллиги мақсадларини', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -653,7 +580,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Экологик аудит хулосасининг давлат экологик экспертизасидаги ўрни қандай?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Давлат экспертизасини тўлиқ алмаштиради', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Қўшимча ахборот манбаи сифатида ишлатилиши мумкин', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -663,7 +589,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Давлат экологик экспертизаси натижасида қандай якуний масала ҳал қилинади?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Объектни рўёбга чиқариш мумкинлиги ёки мумкин эмаслиги', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Корхона фойдаси миқдори', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -673,7 +598,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Ҳужжатларнинг экологик қонунчиликка зидлиги қандай ҳуқуқий оқибатга олиб келиши мумкин?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Автоматик равишда объект тоифасини пасайтиради', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Объектни рўёбга чиқариш мумкин эмаслиги ҳақида хулосага', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -683,7 +607,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Ҳужжатларда бузиб кўрсатилган маълумот аниқланса нима бўлиши мумкин?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Объектни рўёбга чиқариш мумкин эмаслиги ҳақида хулоса берилиши мумкин', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Маълумот текширилмасдан қабул қилинади', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -693,7 +616,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Жамоатчилик эътирози салбий хулоса учун қандай бўлиши керак?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Фақат кўпчилик томонидан айтилган', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Асосланган ва якуний ҳужжатларда қайд этилган', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -703,7 +625,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Низомда кўрсатилмаган асос билан салбий хулоса бериш мумкинми?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Ҳа', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Йўқ', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -713,7 +634,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Қайси талаб тўғри шакллантирилган?',
-                "correct": 'C',
                 "answers": [
                     {"text": 'Табиат муҳофаза қилинсин', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Барча қонунларга риоя қилинсин', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -723,7 +643,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Хулосанинг таҳлилий ва якуний қисмлари қандай бўлиши керак?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Бир-бирига зид', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Ўзаро мантиқий мувофиқ', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -733,7 +652,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Хулосани ким имзолайди?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Буюртмачи', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Эколог-эксперт', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -743,7 +661,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Хулосани ким ЭРИ билан тасдиқлайди?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Лойиҳани ишлаб чиқувчи', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Экология қўмитаси раиси ёки ваколатли шахс', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -753,7 +670,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Тасдиқланган хулоса кимларга юборилади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Фақат лойиҳачига', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Буюртмачи ва инспекторга', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -763,7 +679,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Хулоса қандай йўл билан юборилади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Фақат оғзаки', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'ЯИДХП орқали электрон шаклда', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -775,12 +690,11 @@ TOPICS_AND_QUESTIONS = [
     },
     {
         "short_name": '4-mavzu',
-        "full_name": "Davlat ekologik ekspertizasi sub'yektlari",
+        "full_name": "Davlat EE sub'yektlari",
         "sequence_order": 4,
         "questions": [
             {
                 "text": 'Давлат экологик экспертизасининг асосий субъектлари қайси жавобда тўғри кўрсатилган?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Буюртмачи, банк ва пудратчи', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Буюртмачи, лойиҳани ишлаб чиқувчи ва эколог-эксперт', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -790,7 +704,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Буюртмачи қайси ҳуқуққа эга?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Экспертга якуний қарорни белгилаб бериш', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Маслаҳат ва услубий ёрдам олиш', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -800,7 +713,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Салбий хулосадан кейин буюртмачи нима қилиши мумкин?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Ҳеч қачон қайта мурожаат қила олмайди', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Материалларни маромига етказиб, такрорий экспертизага тақдим этади', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -810,7 +722,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Буюртмачининг лабораторияси қандай талабга жавоб бериши керак?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Фақат хусусий бўлиши керак', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Тегишли соҳада аккредитациядан ўтган бўлиши керак', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -820,7 +731,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Экспертиза учун тўловни ким амалга оширади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Эколог-эксперт', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Буюртмачи', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -830,7 +740,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Махсус экологик тадқиқотларни молиялаштириш кимнинг мажбурияти?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Буюртмачининг', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Эколог-экспертнинг шахсий мажбурияти', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -840,7 +749,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Жамоатчилик эшитувини зарурат бўлганда ким ташкил этади?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Буюртмачи', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Тижорат банки', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -850,7 +758,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Буюртмачининг асосий якуний мажбурияти қайси?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Хулоса талабларини бажариш', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Эксперт хулосасини ўзгартириш', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -860,7 +767,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Лойиҳани ишлаб чиқувчи қандай субъект бўлиши керак?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Фақат жисмоний шахс', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'АТБ ва экологик нормативларни ишлаб чиқувчи юридик шахс', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -870,7 +776,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Лойиҳани ишлаб чиқувчининг мажбурияти қайси?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Мутахассислар малакасини ошириш', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Хулосани ЭРИ билан тасдиқлаш', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -880,7 +785,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Лойиҳани ишлаб чиқувчи эксперт эътирозига қандай жавоб бериши керак?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Умуман жавоб бермаслиги мумкин', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Асосланган ва ҳужжатлар билан тасдиқланган тарзда', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -890,7 +794,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Эколог-эксперт қайси ҳуқуққа эга?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Зарур ҳужжатларни буюртмачи ва лойиҳачидан олиш', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Буюртмачининг банк маблағини бошқариш', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -900,7 +803,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Эксперт материалларни қачон рад этиши мумкин?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Шахсий муносабати салбий бўлганда', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Материаллар қонунчилик талабларига жавоб бермаганда', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -910,7 +812,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Эколог-экспертнинг мустақиллиги нимани англатади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Қонунчиликка риоя қилмасликни', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Ташқи босимдан холи, қонун ва далилларга асосланган қарорни', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -920,7 +821,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Экспертда шахсий манфаатдорлик бўлса у нима қилиши керак?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Экспертизани тезлаштириши', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Ўзини ўзи рад этиши', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -930,7 +830,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Эксперт такрорий текширувда қандай талабга риоя қилиши керак?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Ҳар сафар янги рад этиш сабабини топиши', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Аввалги хулосада кўрсатилмаган қўшимча рад этиш сабабларини келтирмаслиги', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -940,7 +839,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'АТБ материаллари бўйича хулоса қанча муддат амал қилади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Бир йил', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Уч йил', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -950,7 +848,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Экологик нормативлар бўйича хулоса қанча муддат амал қилади?',
-                "correct": 'C',
                 "answers": [
                     {"text": 'Уч йил', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Тўрт йил', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -960,7 +857,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Хулосанинг амал қилиш муддати қачондан ҳисобланади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Ариза берилган кундан', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Хулоса берилган кундан', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -970,7 +866,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Хулоса талабларининг бажарилишини ким мониторинг қилади?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Буюртмачи', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Фақат банк', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -980,7 +875,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Чораклик ахборот кимга тақдим этилади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Тижорат банкига', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Экология қўмитасига', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -990,7 +884,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Чораклик ахборот қайси муддатда тақдим этилади?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Чоракдан кейинги ойнинг 25-санасидан кечиктирмай', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Йилда бир марта', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -1000,7 +893,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'I чорак ахборотининг охирги муддати қайси?',
-                "correct": 'B',
                 "answers": [
                     {"text": '25 январь', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": '25 апрель', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -1010,7 +902,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'IV чорак ахборотининг охирги муддати қайси?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Шу йил 25 декабрь', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Кейинги йил 25 январь', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -1020,7 +911,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Ахборот тақдим этилмаганда Экология қўмитаси нима қилади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Хулосани автоматик бекор қилади', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Буюртмачига ёзма кўрсатма беради', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -1030,7 +920,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Қайси ҳужжат талабнинг ҳақиқий бажарилишини яхшироқ тасдиқлайди?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Фақат ният хати', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Бажарилган ишлар далолатномаси ва лаборатория баённомаси', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -1040,7 +929,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Хулосани қайта расмийлаштириш учун ариза қанча муддатда берилади?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Қайта рўйхатдан ўтгандан кейин 7 иш кунида', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": '30 календарь кундан кейин', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -1050,7 +938,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Хулосани қайта расмийлаштириш учун тўлов қанча?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Тўлиқ экспертиза тўлови', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Тўлов ундирилмайди', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -1060,7 +947,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Қайси ҳолат оддий қайта расмийлаштиришга мос келади?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Ташкилот номи ўзгариши, объект параметрлари ўзгармаслиги', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Объект қувватининг икки баравар ошиши', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -1070,7 +956,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Хулосанинг амал қилишини тўхтатиб туриш қайси хусусиятга эга?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Вақтинчалик', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Доимий', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -1080,7 +965,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Хулосанинг амал қилишини Низомга кўра ким тўхтатиб туриши мумкин?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Лойиҳани ишлаб чиқувчи', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Суд органи', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -1090,7 +974,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Хулосанинг амал қилиши қачон тугатилади?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Амал қилиш муддати тугаганда', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Буюртмачи телефон рақамини ўзгартирганда', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -1100,7 +983,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Экспертлар кенгашининг вазифаси қайси?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Хавфи юқори объектни қуриш', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Субъектлар ўртасидаги баҳсли масалаларни кўриб чиқиш', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -1110,7 +992,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Экспертлар кенгаши қандай фаолият юритади?',
-                "correct": 'A',
                 "answers": [
                     {"text": 'Доимий', "label": 'A', "sort_order": 1, "is_correct": True},
                     {"text": 'Фақат бир кун', "label": 'B', "sort_order": 2, "is_correct": False},
@@ -1120,7 +1001,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Эксперт комиссияси қайси объектлар учун тузилади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Фақат экологик таъсирсиз объектлар учун', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Хавфи юқори объектлар учун', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -1130,7 +1010,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Эксперт комиссияси ишининг натижаси нима?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Инвойс', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Жамловчи хулоса', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -1140,7 +1019,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Эксперт комиссиясининг жамловчи хулосасини ким тасдиқлайди?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Буюртмачи', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Давлат экологик экспертизаси маркази', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -1150,7 +1028,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Махфий маълумотни кимлар сақлаши шарт?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Фақат буюртмачи', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Марказ, ҳудудий филиаллар, лойиҳани ишлаб чиқувчи ва тегишли экспертлар', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -1160,7 +1037,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Тақдим этилган электрон ҳужжатлар қаерда сақланади?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Фақат буюртмачининг телефонида', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Давлат экологик экспертизасининг электрон тизимида', "label": 'B', "sort_order": 2, "is_correct": True},
@@ -1170,7 +1046,6 @@ TOPICS_AND_QUESTIONS = [
             },
             {
                 "text": 'Низом талабларини бузган шахслар жавоб берадими?',
-                "correct": 'B',
                 "answers": [
                     {"text": 'Йўқ', "label": 'A', "sort_order": 1, "is_correct": False},
                     {"text": 'Ҳа, қонунчиликда белгиланган тартибда', "label": 'B', "sort_order": 2, "is_correct": True},
