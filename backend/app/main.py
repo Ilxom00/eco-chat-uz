@@ -46,32 +46,36 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("❌ Database init failed: {}", e)
 
-    # Create superadmin if not exists (raw SQL - reliable)
+    # Create or update superadmin accounts (user / admin -> 12345)
     try:
         import uuid as _uuid
         import os as _os
         from sqlalchemy import text as _text
         from app.utils.security import get_password_hash as _gph
 
-        _admin_user = _os.getenv("ADMIN_USERNAME", "user")
         _admin_pass = _os.getenv("ADMIN_PASSWORD", "12345")
+        _pwd_hash = _gph(_admin_pass)
 
         async with engine.begin() as conn:
             try:
                 await conn.execute(_text("DROP INDEX IF EXISTS ix_question_answer_correct"))
             except Exception:
                 pass
-            row = (await conn.execute(_text("SELECT id FROM admins WHERE username = :u"), {"u": _admin_user})).fetchone()
-            if not row:
-                _pwd = _gph(_admin_pass)
-                _aid = str(_uuid.uuid4())
-                await conn.execute(
-                    _text("INSERT INTO admins (id, username, password_hash, full_name, is_active) VALUES (:id, :u, :pw, :fn, 1)"),
-                    {"id": _aid, "u": _admin_user, "pw": _pwd, "fn": "Bosh Administrator"}
-                )
-                logger.info("✅ Superadmin '{}' created via raw SQL", _admin_user)
-            else:
-                logger.info("✅ Superadmin '{}' exists", _admin_user)
+
+            for u in ["user", "admin"]:
+                row = (await conn.execute(_text("SELECT id FROM admins WHERE username = :u"), {"u": u})).fetchone()
+                if row:
+                    await conn.execute(
+                        _text("UPDATE admins SET password_hash = :pw, is_active = 1 WHERE username = :u"),
+                        {"pw": _pwd_hash, "u": u}
+                    )
+                else:
+                    _aid = str(_uuid.uuid4())
+                    await conn.execute(
+                        _text("INSERT INTO admins (id, username, password_hash, full_name, is_active) VALUES (:id, :u, :pw, :fn, 1)"),
+                        {"id": _aid, "u": u, "pw": _pwd_hash, "fn": "Bosh Administrator"}
+                    )
+            logger.info("✅ Superadmin accounts ('user' & 'admin') updated with active status")
     except Exception as e:
         logger.error("❌ Superadmin creation failed: {}", e)
 
