@@ -4,7 +4,7 @@ from app.database import get_db
 from app.api.deps import get_current_admin
 from app.services import result_service, excel_service
 
-router = APIRouter(prefix="/reports", tags=["reports"], dependencies=[Depends(get_current_admin)])
+router = APIRouter(tags=["reports"], dependencies=[Depends(get_current_admin)])
 
 @router.get("/general-stats")
 async def general_stats(db: AsyncSession = Depends(get_db)):
