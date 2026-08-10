@@ -3,13 +3,14 @@ import logging
 from telegram import Update
 from telegram.ext import ContextTypes
 from .. import messages
-from ..keyboards import get_topic_list_keyboard, get_start_test_keyboard
+from ..keyboards import get_topic_list_keyboard
 from ..api_client import bot_api
+from . import test_flow
 
 logger = logging.getLogger(__name__)
 
 TOPIC_SELECT = 20
-TEST_CONFIRM = 21
+TEST_IN_PROGRESS = 22
 
 
 async def show_topics(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -32,28 +33,24 @@ async def show_topics(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_topic_select(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    if query:
+        await query.answer()
+
+    if not query or not query.data:
+        return TOPIC_SELECT
 
     if query.data == "ignore":
         return TOPIC_SELECT
 
     if query.data.startswith("topic:"):
-        topic_id = query.data.split(":", 1)[1]  # UUID string
+        topic_id = query.data.split(":", 1)[1]
         context.user_data['current_topic_id'] = topic_id
-
-        try:
-            topic = await bot_api.get_topic(topic_id)
-            topic_name = topic.get("name") or topic.get("short_name") or "Тест"
-            text = messages.TEST_INTRO.format(topic_name=topic_name)
-            await query.edit_message_text(text, reply_markup=get_start_test_keyboard())
-            return TEST_CONFIRM
-        except Exception as e:
-            logger.error("Error fetching topic %s: %s", topic_id, e, exc_info=True)
-            await query.edit_message_text(messages.ERROR_NETWORK)
-            return TOPIC_SELECT
+        # Start test directly for selected topic!
+        return await test_flow.start_test(update, context)
 
 
 async def handle_back(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    if query:
+        await query.answer()
     return await show_topics(update, context)
