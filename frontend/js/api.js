@@ -88,6 +88,12 @@ const API = {
     async deleteQuestion(id) {
         return this.fetch(`/questions/${id}`, { method: 'DELETE' });
     },
+    async updateQuestion(id, data) {
+        return this.fetch(`/questions/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        });
+    },
 
     // Branches
     async getBranches() {
