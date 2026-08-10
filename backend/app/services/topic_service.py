@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func
+from sqlalchemy import func, text
 from app.models.topic import Topic
 from app.models.question import Question
 
@@ -30,7 +30,6 @@ async def is_topic_available_for_testing(db: AsyncSession, topic_id: str) -> boo
     return cnt >= 15
 
 async def get_topic_status_for_employee(db: AsyncSession, employee_id: str, topic_id: str) -> str:
-    # Logic: LOCKED/AVAILABLE/IN_PROGRESS/ATTEMPT1_DONE/COMPLETED
     return "AVAILABLE"
 
 async def get_all_topics_status_for_employee(db: AsyncSession, employee_id: str) -> list[dict]:
@@ -42,3 +41,53 @@ async def get_all_topics_status_for_employee(db: AsyncSession, employee_id: str)
 
 async def is_topic_unlocked_for_employee(db: AsyncSession, employee_id: str, topic_id: str) -> bool:
     return True
+
+async def delete_topic_cascade(db: AsyncSession, topic_id: str) -> bool:
+    """Mavzuni va barcha bog'liq ma'lumotlarni to'liq o'chiradi."""
+    try:
+        tid = topic_id
+        # 1. attempt_questions → test_attempts (this topic)
+        await db.execute(text("""
+            DELETE FROM attempt_questions WHERE attempt_id IN (
+                SELECT id FROM test_attempts WHERE topic_id = :tid
+            )
+        """), {"tid": tid})
+
+        # 2. employee_topic_questions → employee_topic_assignments (this topic)
+        await db.execute(text("""
+            DELETE FROM employee_topic_questions WHERE assignment_id IN (
+                SELECT id FROM employee_topic_assignments WHERE topic_id = :tid
+            )
+        """), {"tid": tid})
+
+        # 3. Null out circular FKs in employee_topic_assignments
+        await db.execute(text("""
+            UPDATE employee_topic_assignments
+            SET attempt1_id = NULL, attempt2_id = NULL
+            WHERE topic_id = :tid
+        """), {"tid": tid})
+
+        # 4. Delete test_attempts for this topic
+        await db.execute(text("DELETE FROM test_attempts WHERE topic_id = :tid"), {"tid": tid})
+
+        # 5. Delete employee_topic_assignments for this topic
+        await db.execute(text("DELETE FROM employee_topic_assignments WHERE topic_id = :tid"), {"tid": tid})
+
+        # 6. Delete question_answers for questions in this topic
+        await db.execute(text("""
+            DELETE FROM question_answers WHERE question_id IN (
+                SELECT id FROM questions WHERE topic_id = :tid
+            )
+        """), {"tid": tid})
+
+        # 7. Delete questions
+        await db.execute(text("DELETE FROM questions WHERE topic_id = :tid"), {"tid": tid})
+
+        # 8. Delete topic
+        await db.execute(text("DELETE FROM topics WHERE id = :tid"), {"tid": tid})
+
+        await db.commit()
+        return True
+    except Exception as e:
+        await db.rollback()
+        raise e
