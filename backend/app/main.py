@@ -42,9 +42,40 @@ async def lifespan(app: FastAPI):
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        logger.info("вњ… Database tables ready")
+        logger.info("✅ Database tables ready")
     except Exception as e:
-        logger.error("вќЊ Database init failed: {}", e)
+        logger.error("❌ Database init failed: {}", e)
+
+    # Create superadmin if not exists
+    try:
+        from sqlalchemy.ext.asyncio import AsyncSession
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.future import select
+        from app.models.admin import Admin
+        from app.utils.security import get_password_hash
+        import os
+
+        admin_user = os.getenv("ADMIN_USERNAME", "user")
+        admin_pass = os.getenv("ADMIN_PASSWORD", "12345")
+
+        AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(Admin).where(Admin.username == admin_user))
+            existing = result.scalar_one_or_none()
+            if not existing:
+                new_admin = Admin(
+                    username=admin_user,
+                    password_hash=get_password_hash(admin_pass),
+                    full_name="Bosh Administrator",
+                    is_active=True,
+                )
+                session.add(new_admin)
+                await session.commit()
+                logger.info("✅ Superadmin '{}' created", admin_user)
+            else:
+                logger.info("✅ Superadmin '{}' already exists", admin_user)
+    except Exception as e:
+        logger.error("❌ Superadmin creation failed: {}", e)
 
     # Redis connectivity check
     try:
