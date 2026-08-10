@@ -195,6 +195,73 @@ class BotAPIClient:
                 "in_progress_attempt_id": in_progress_id,
                 "status": assignment.status,
             }
+    async def get_employee_status(self, telegram_user_id: int) -> Dict[str, Any]:
+        """Get full employee profile + all topic results."""
+        from app.models.attempt import EmployeeTopicAssignment, TestAttempt
+        from app.models.topic import Topic
+        from sqlalchemy.future import select as sa_select
+
+        async with AsyncSessionLocal() as db:
+            emp = await employee_service.get_employee_by_telegram_id(db, telegram_user_id)
+            if not emp:
+                return {}
+
+            branch_name = await _get_branch_name(db, emp.branch_id)
+
+            # Get all topic assignments for this employee
+            assignments_res = await db.execute(
+                sa_select(EmployeeTopicAssignment).where(
+                    EmployeeTopicAssignment.employee_id == str(emp.id)
+                )
+            )
+            assignments = assignments_res.scalars().all()
+
+            results = []
+            for asgn in assignments:
+                # Get topic name
+                topic_res = await db.execute(
+                    sa_select(Topic).where(Topic.id == str(asgn.topic_id))
+                )
+                topic = topic_res.scalar_one_or_none()
+                topic_name = f"{topic.short_name} — {topic.full_name}" if topic else str(asgn.topic_id)
+
+                row = {
+                    "topic_id": str(asgn.topic_id),
+                    "topic_name": topic_name,
+                    "status": asgn.status,
+                    "attempt1_score": None,
+                    "attempt1_pct": None,
+                    "attempt2_score": None,
+                    "attempt2_pct": None,
+                }
+
+                # Get attempt 1 score
+                if asgn.attempt1_id:
+                    a1 = (await db.execute(
+                        sa_select(TestAttempt).where(TestAttempt.id == str(asgn.attempt1_id))
+                    )).scalar_one_or_none()
+                    if a1 and a1.score is not None:
+                        row["attempt1_score"] = a1.score
+                        row["attempt1_pct"] = round(a1.score / 15 * 100)
+
+                # Get attempt 2 score
+                if asgn.attempt2_id:
+                    a2 = (await db.execute(
+                        sa_select(TestAttempt).where(TestAttempt.id == str(asgn.attempt2_id))
+                    )).scalar_one_or_none()
+                    if a2 and a2.score is not None:
+                        row["attempt2_score"] = a2.score
+                        row["attempt2_pct"] = round(a2.score / 15 * 100)
+
+                results.append(row)
+
+            return {
+                "id": str(emp.id),
+                "full_name": emp.full_name,
+                "branch_name": branch_name,
+                "phone": emp.phone or "—",
+                "results": results,
+            }
 
 
 bot_api = BotAPIClient()
