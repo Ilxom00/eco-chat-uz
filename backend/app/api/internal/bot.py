@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
@@ -6,25 +7,30 @@ from app.redis_client import get_redis
 from app.api.deps import get_internal_token
 from app.services import employee_service, branch_service, topic_service, test_engine
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/bot", tags=["internal"], dependencies=[Depends(get_internal_token)])
 
 @router.post("/register")
 async def register(data: dict, db: AsyncSession = Depends(get_db)):
-    emp, is_new = await employee_service.get_or_create_employee(db, data.get("telegram_user_id"))
-    
-    # Safely resolve real UUID for branch_id
-    raw_bid = data.get("branch_id")
-    raw_bname = data.get("branch_name")
-    resolved_bid = await branch_service.resolve_branch_id(db, branch_id=raw_bid, branch_name=raw_bname)
+    try:
+        emp, is_new = await employee_service.get_or_create_employee(db, data.get("telegram_user_id"))
+        
+        raw_bid = data.get("branch_id")
+        raw_bname = data.get("branch_name")
+        resolved_bid = await branch_service.resolve_branch_id(db, branch_id=raw_bid, branch_name=raw_bname)
 
-    emp = await employee_service.update_registration(
-        db, 
-        data.get("telegram_user_id"), 
-        data.get("full_name"), 
-        resolved_bid, 
-        data.get("phone")
-    )
-    return {"employee_id": str(emp.id), "success": True}
+        emp = await employee_service.update_registration(
+            db, 
+            data.get("telegram_user_id"), 
+            data.get("full_name"), 
+            resolved_bid, 
+            data.get("phone")
+        )
+        return {"employee_id": str(emp.id), "success": True}
+    except Exception as e:
+        logger.error("Error registering employee: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/employee/{telegram_user_id}/status")
 async def get_status(telegram_user_id: int, db: AsyncSession = Depends(get_db)):
