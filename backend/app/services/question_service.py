@@ -1,134 +1,141 @@
 import uuid
 import logging
-from datetime import datetime
-import pytz
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func, text
+from sqlalchemy import text
 from app.models.question import Question, QuestionAnswer
-from app.models.topic import Topic
 
 logger = logging.getLogger(__name__)
 
 
-def _force_uuid(val: str | uuid.UUID) -> uuid.UUID:
-    """Strictly convert string or UUID to a python uuid.UUID object."""
+def _force_str(val) -> str:
     if isinstance(val, uuid.UUID):
-        return val
-    try:
-        return uuid.UUID(str(val).strip())
-    except Exception as e:
-        logger.error("Could not parse UUID from '%s': %s", val, e)
-        raise ValueError(f"Яроқсиз UUID идентификатор: {val}")
+        return str(val)
+    return str(val).strip()
 
 
-async def create_question_with_answers(db: AsyncSession, topic_id: str, text_content: str, answers: list[dict]) -> Question:
+async def create_question_with_answers(db: AsyncSession, topic_id: str, text_content: str, answers: list[dict]):
     if len(answers) != 4:
         raise ValueError("Барча 4 та вариант киритилиши шарт")
     if sum(1 for a in answers if a.get("is_correct")) != 1:
         raise ValueError("Аниқ 1 та тўғри жавоб танланиши шарт")
         
-    tid_uuid = _force_uuid(topic_id)
+    tid_str = _force_str(topic_id)
 
-    # Verify topic exists in DB to prevent Foreign Key errors
-    res = await db.execute(select(Topic).filter(Topic.id == tid_uuid))
-    topic_obj = res.scalar_one_or_none()
-    if not topic_obj:
-        # Fallback: find first active topic in DB
-        res_first = await db.execute(select(Topic).filter(Topic.is_active == True).order_by(Topic.sequence_order))
-        first_t = res_first.scalars().first()
+    # 1. Verify topic exists in DB
+    topic_row = (await db.execute(
+        text("SELECT id FROM topics WHERE id = :tid"),
+        {"tid": tid_str}
+    )).fetchone()
+
+    if not topic_row:
+        # Fallback to first active topic in DB
+        first_t = (await db.execute(
+            text("SELECT id FROM topics WHERE is_active = true ORDER BY sequence_order ASC LIMIT 1")
+        )).fetchone()
         if not first_t:
             raise ValueError("Мавзу базада топилмади. Илтимос, аввал янги мавзу яратинг.")
-        tid_uuid = _force_uuid(first_t.id)
+        tid_str = str(first_t[0])
 
-    question_uuid = uuid.uuid4()
-    
-    question = Question(
-        id=question_uuid,
-        topic_id=tid_uuid,
-        text=text_content,
-        status='ACTIVE'
-    )
-    db.add(question)
+    question_id_str = str(uuid.uuid4())
+
+    # Universal SQL Insert — compatible with both PostgreSQL & SQLite
+    await db.execute(text("""
+        INSERT INTO questions (id, topic_id, text, status)
+        VALUES (:id, :tid, :txt, 'ACTIVE')
+    """), {
+        "id": question_id_str,
+        "tid": tid_str,
+        "txt": text_content
+    })
     
     for i, ans in enumerate(answers):
-        q_ans = QuestionAnswer(
-            id=uuid.uuid4(),
-            question_id=question_uuid,
-            text=ans["text"],
-            is_correct=bool(ans.get("is_correct", False)),
-            option_label=ans.get("option_label", ["A", "B", "C", "D"][i]),
-            sort_order=i+1
-        )
-        db.add(q_ans)
+        ans_id_str = str(uuid.uuid4())
+        await db.execute(text("""
+            INSERT INTO question_answers (id, question_id, text, is_correct, option_label, sort_order)
+            VALUES (:id, :qid, :txt, :ic, :ol, :so)
+        """), {
+            "id": ans_id_str,
+            "qid": question_id_str,
+            "txt": ans["text"],
+            "ic": bool(ans.get("is_correct", False)),
+            "ol": ans.get("option_label", ["A", "B", "C", "D"][i]),
+            "so": i + 1
+        })
     
     await db.commit()
-    await db.refresh(question)
-    return question
+
+    class QuestionResult:
+        def __init__(self, qid):
+            self.id = qid
+
+    return QuestionResult(question_id_str)
 
 
 async def delete_question_permanent(db: AsyncSession, question_id: str) -> bool:
-    qid_uuid = _force_uuid(question_id)
-    await db.execute(text("DELETE FROM question_answers WHERE question_id = :qid"), {"qid": qid_uuid})
-    await db.execute(text("DELETE FROM questions WHERE id = :qid"), {"qid": qid_uuid})
+    qid_str = _force_str(question_id)
+    await db.execute(text("DELETE FROM question_answers WHERE question_id = :qid"), {"qid": qid_str})
+    await db.execute(text("DELETE FROM questions WHERE id = :qid"), {"qid": qid_str})
     await db.commit()
     return True
 
 
-async def archive_question(db: AsyncSession, question_id: str) -> Question:
-    qid_uuid = _force_uuid(question_id)
-    result = await db.execute(select(Question).filter(Question.id == qid_uuid))
-    question = result.scalar_one_or_none()
-    if question:
-        question.status = 'ARCHIVED'
-        question.archived_at = datetime.utcnow().replace(tzinfo=pytz.utc)
-        await db.commit()
-        await db.refresh(question)
-    return question
+async def archive_question(db: AsyncSession, question_id: str):
+    qid_str = _force_str(question_id)
+    await db.execute(text("UPDATE questions SET status = 'ARCHIVED' WHERE id = :qid"), {"qid": qid_str})
+    await db.commit()
+    class QResult:
+        def __init__(self, qid):
+            self.id = qid
+    return QResult(qid_str)
 
 
-async def get_active_questions_for_topic(db: AsyncSession, topic_id: str) -> list[Question]:
-    tid_uuid = _force_uuid(topic_id)
-    result = await db.execute(select(Question).filter(Question.topic_id == tid_uuid, Question.status == 'ACTIVE'))
-    return result.scalars().all()
+async def get_active_questions_for_topic(db: AsyncSession, topic_id: str) -> list:
+    tid_str = _force_str(topic_id)
+    rows = (await db.execute(
+        text("SELECT id, text, status FROM questions WHERE topic_id = :tid AND status = 'ACTIVE'"),
+        {"tid": tid_str}
+    )).fetchall()
+    return rows
 
 
 async def get_questions_for_topic_paginated(db: AsyncSession, topic_id: str, page: int, page_size: int, include_archived: bool = False) -> tuple[list, int]:
     try:
-        tid_uuid = _force_uuid(topic_id)
+        tid_str = _force_str(topic_id)
 
-        query = select(Question).filter(Question.topic_id == tid_uuid)
-        if not include_archived:
-            query = query.filter(Question.status == 'ACTIVE')
-            
-        total_query = select(func.count()).select_from(Question).filter(Question.topic_id == tid_uuid)
-        if not include_archived:
-            total_query = total_query.filter(Question.status == 'ACTIVE')
-            
-        total = (await db.execute(total_query)).scalar() or 0
+        total = (await db.execute(
+            text("SELECT COUNT(*) FROM questions WHERE topic_id = :tid AND status = 'ACTIVE'"),
+            {"tid": tid_str}
+        )).scalar() or 0
+
         if total == 0:
             return [], 0
 
-        query = query.order_by(Question.created_at.asc()).offset((page - 1) * page_size).limit(page_size)
-        questions_raw = (await db.execute(query)).scalars().all()
+        limit = page_size
+        offset = (page - 1) * page_size
+
+        q_rows = (await db.execute(
+            text("SELECT id, text, status, created_at FROM questions WHERE topic_id = :tid AND status = 'ACTIVE' ORDER BY created_at ASC LIMIT :lim OFFSET :off"),
+            {"tid": tid_str, "lim": limit, "off": offset}
+        )).fetchall()
         
         result_list = []
-        for q in questions_raw:
+        for q in q_rows:
+            q_id_str = str(q[0])
             ans_rows = (await db.execute(
-                select(QuestionAnswer)
-                .filter(QuestionAnswer.question_id == q.id)
-                .order_by(QuestionAnswer.sort_order)
-            )).scalars().all()
+                text("SELECT text, is_correct, option_label FROM question_answers WHERE question_id = :qid ORDER BY sort_order ASC"),
+                {"qid": q_id_str}
+            )).fetchall()
 
-            correct_ans = next((a.text for a in ans_rows if a.is_correct), "—")
-            options = [a.text for a in ans_rows]
+            correct_ans = next((a[0] for a in ans_rows if a[1]), "—")
+            options = [a[0] for a in ans_rows]
             result_list.append({
-                "id": str(q.id),
-                "text": q.text,
+                "id": q_id_str,
+                "text": q[1],
                 "correct_answer": correct_ans,
                 "options": options,
-                "status": q.status,
-                "created_at": q.created_at.isoformat() if q.created_at else None
+                "status": q[2],
+                "created_at": str(q[3]) if q[3] else None
             })
         
         return result_list, total
