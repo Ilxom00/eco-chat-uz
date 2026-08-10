@@ -87,7 +87,12 @@ async def migrate():
                 for row in rows:
                     row_dict = dict(zip(keys, row))
                     
-                    # Convert UUIDs to strings or correct types if needed
+                    # Convert SQLite integers representing booleans to strict Python booleans for postgres
+                    for k, v in row_dict.items():
+                        if k == "is_active" or k.startswith("is_"):
+                            if v is not None:
+                                row_dict[k] = bool(v)
+                    
                     col_names = ", ".join(row_dict.keys())
                     val_placeholders = ", ".join([f":{k}" for k in row_dict.keys()])
                     
