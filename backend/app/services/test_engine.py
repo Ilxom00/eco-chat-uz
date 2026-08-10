@@ -804,8 +804,14 @@ async def submit_answer(
         attempt_completed = True
 
     await db.commit()
+    try:
+        from app.services.data_guard import auto_backup_data
+        await auto_backup_data(db)
+    except Exception:
+        pass
 
     return {
+
         "is_correct": is_correct,
         "answer_status": "ANSWERED",
         "next_question": next_question_data,
