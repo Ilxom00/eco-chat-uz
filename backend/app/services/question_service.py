@@ -62,7 +62,7 @@ async def create_question_with_answers(db: AsyncSession, topic_id: str, text_con
             "qid": question_id_str,
             "txt": ans["text"],
             "ic": bool(ans.get("is_correct", False)),
-            "ol": ans.get("option_label", ["A", "B", "C", "D"][i]),
+            "ol": ans.get("option_label", ["А", "Б", "В", "Г"][i]),
             "so": i + 1
         })
     
@@ -105,7 +105,7 @@ async def update_question_with_answers(db: AsyncSession, question_id: str, text_
             "qid": qid_str,
             "txt": ans["text"],
             "ic": bool(ans.get("is_correct", False)),
-            "ol": ans.get("option_label", ["A", "B", "C", "D"][i]),
+            "ol": ans.get("option_label", ["А", "Б", "В", "Г"][i]),
             "so": i + 1
         })
     
