@@ -78,6 +78,15 @@ const API = {
         const q = new URLSearchParams(params).toString();
         return this.fetch(`/topics/${topicId}/questions?${q}`);
     },
+    async createQuestion(topicId, data) {
+        return this.fetch(`/topics/${topicId}/questions`, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    },
+    async deleteQuestion(id) {
+        return this.fetch(`/questions/${id}`, { method: 'DELETE' });
+    },
 
     // Branches
     async getBranches() {
