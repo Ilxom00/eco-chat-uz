@@ -53,6 +53,10 @@ const API = {
         const q = new URLSearchParams(params).toString();
         return this.fetch(`/dashboard/employees?${q}`);
     },
+    async getAttemptDetail(attemptId) {
+        return this.fetch(`/dashboard/attempts/${attemptId}/detail`);
+    },
+
     async getEmployeeDetail(id) {
         return this.fetch(`/employees/${id}`);
     },
