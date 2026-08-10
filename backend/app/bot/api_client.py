@@ -1,74 +1,52 @@
-# -*- coding: utf-8 -*-
-"""
-Bot direct DB & service integration layer.
-Interacts directly with AsyncSessionLocal to eliminate port & localhost HTTP dependency.
-"""
 import logging
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict, Any, List
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import AsyncSessionLocal, engine
-from app.services import employee_service, branch_service, topic_service, test_engine
+from app.services import employee_service, topic_service, test_engine
 from app.seeds.seed import seed_topics_and_questions
 
 logger = logging.getLogger(__name__)
 
 
 class BotAPIClient:
-    async def register_employee(
-        self, 
-        telegram_user_id: int, 
-        full_name: str, 
-        branch_id: Optional[str] = None, 
-        phone: str = "", 
-        branch_name: Optional[str] = None
-    ) -> Dict[str, Any]:
-        async with AsyncSessionLocal() as db:
-            emp, is_new = await employee_service.get_or_create_employee(db, telegram_user_id)
-            resolved_bid = await branch_service.resolve_branch_id(db, branch_id=branch_id, branch_name=branch_name)
-            emp = await employee_service.update_registration(
-                db, telegram_user_id, full_name, resolved_bid, phone or ""
-            )
-            return {"employee_id": str(emp.id), "success": True}
 
-    async def get_employee_status(self, telegram_user_id: int) -> Dict[str, Any]:
+    async def get_branches(self) -> List[Dict[str, Any]]:
+        async with AsyncSessionLocal() as db:
+            from sqlalchemy import text
+            rows = (await db.execute(text("SELECT id, name FROM branches WHERE is_active = true ORDER BY sort_order, name"))).fetchall()
+            return [{"id": str(r[0]), "name": r[1]} for r in rows]
+
+    async def register_employee(self, telegram_user_id: int, full_name: str, branch_name_or_id: str, phone: Optional[str] = None) -> Dict[str, Any]:
+        async with AsyncSessionLocal() as db:
+            emp = await employee_service.register_employee(
+                db=db,
+                telegram_user_id=telegram_user_id,
+                full_name=full_name,
+                branch_name_or_id=branch_name_or_id,
+                phone=phone
+            )
+            return {
+                "id": str(emp.id),
+                "full_name": emp.full_name,
+                "branch_name": branch_name_or_id
+            }
+
+    async def get_employee_by_telegram_id(self, telegram_user_id: int) -> Optional[Dict[str, Any]]:
         async with AsyncSessionLocal() as db:
             emp = await employee_service.get_employee_by_telegram_id(db, telegram_user_id)
             if not emp:
-                return {"registration_state": "NOT_REGISTERED"}
-            
-            topics_raw = await topic_service.get_all_topics_status_for_employee(db, str(emp.id))
-            topics_list = []
-            for top in topics_raw:
-                t_obj = top.get("topic")
-                if t_obj:
-                    topics_list.append({
-                        "id": str(t_obj.id),
-                        "short_name": t_obj.short_name,
-                        "full_name": t_obj.full_name,
-                        "sequence_order": t_obj.sequence_order,
-                        "status": top.get("status", "AVAILABLE")
-                    })
-
+                return None
+            branch_name = "—"
+            if emp.branch_id:
+                from app.services.branch_service import get_branch_by_id
+                b = await get_branch_by_id(db, str(emp.branch_id))
+                if b:
+                    branch_name = b.name
             return {
-                "employee": {
-                    "id": str(emp.id),
-                    "telegram_user_id": emp.telegram_user_id,
-                    "full_name": emp.full_name,
-                    "phone": emp.phone,
-                    "branch_id": str(emp.branch_id) if emp.branch_id else None,
-                    "registration_state": emp.registration_state
-                },
-                "registration_state": emp.registration_state,
-                "topics": topics_list
-            }
-
-    async def get_branches(self) -> Dict[str, Any]:
-        async with AsyncSessionLocal() as db:
-            branches = await branch_service.get_all_branches(db, False)
-            return {
-                "branches": [
-                    {"id": str(b.id), "name": b.name, "sort_order": b.sort_order}
-                    for b in branches
-                ]
+                "id": str(emp.id),
+                "full_name": emp.full_name,
+                "branch_name": branch_name,
+                "phone": emp.phone,
             }
 
     async def get_topics(self, telegram_user_id: int) -> List[Dict[str, Any]]:
@@ -79,7 +57,6 @@ class BotAPIClient:
             
             topics_raw = await topic_service.get_all_topics_status_for_employee(db, str(emp.id))
 
-            # Auto-seed if database is missing topics/questions
             if not topics_raw:
                 await seed_topics_and_questions(engine, force=True)
                 topics_raw = await topic_service.get_all_topics_status_for_employee(db, str(emp.id))
@@ -101,7 +78,7 @@ class BotAPIClient:
         async with AsyncSessionLocal() as db:
             topic = await topic_service.get_topic_by_id(db, topic_id)
             if not topic:
-                return {"id": topic_id, "name": "Mavzu"}
+                return {"id": topic_id, "name": "Мавзу"}
             return {
                 "id": str(topic.id),
                 "name": f"{topic.short_name} — {topic.full_name}",
@@ -109,20 +86,24 @@ class BotAPIClient:
                 "full_name": topic.full_name,
             }
 
-    async def start_attempt(self, telegram_user_id: int, topic_id: str, attempt_number: int, seminar_confirmed: bool = False) -> Dict[str, Any]:
+    async def start_attempt(self, telegram_user_id: int, topic_id: str, attempt_number: int = 1) -> Dict[str, Any]:
         async with AsyncSessionLocal() as db:
             emp = await employee_service.get_employee_by_telegram_id(db, telegram_user_id)
             if not emp:
-                return {"error": "Employee not found"}
+                return {"error": "Ходим базадан топилмади"}
             
-            from app.redis_client import redis_client
-            attempt = await test_engine.start_attempt(db, redis_client, str(emp.id), str(topic_id), attempt_number)
-            first_q = await test_engine.get_current_question(db, str(attempt.id))
-            return {"attempt_id": str(attempt.id), "first_question": first_q}
+            try:
+                from app.redis_client import redis_client
+                attempt = await test_engine.start_attempt(db, redis_client, str(emp.id), str(topic_id), attempt_number)
+                first_q = await test_engine.get_current_question_full(db, str(attempt.id))
+                return {"attempt_id": str(attempt.id), "first_question": first_q}
+            except Exception as e:
+                logger.error("Error in start_attempt API: %s", e, exc_info=True)
+                return {"error": str(e)}
 
     async def get_current_question(self, attempt_id: str) -> Dict[str, Any]:
         async with AsyncSessionLocal() as db:
-            q = await test_engine.get_current_question(db, attempt_id)
+            q = await test_engine.get_current_question_full(db, attempt_id)
             return {"question": q}
 
     async def submit_answer(self, attempt_id: str, display_order: int, selected_answer_id: str) -> Dict[str, Any]:
@@ -135,9 +116,6 @@ class BotAPIClient:
         async with AsyncSessionLocal() as db:
             res = await test_engine.get_attempt_results(db, attempt_id)
             return res
-
-    async def confirm_seminar(self, attempt_id: str) -> Dict[str, Any]:
-        return {"can_start_attempt2": True, "message": "Confirmed"}
 
 
 bot_api = BotAPIClient()
