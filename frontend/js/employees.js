@@ -166,6 +166,7 @@ const Employees = {
                     </div>
                 </div>
                 <div style="padding:16px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:right;">
+                    <button id="downloadWordBtn" onclick="Employees.downloadWordReport()" style="margin-right:12px;padding:10px 24px;background:linear-gradient(135deg,#185abd,#104f9f);color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px;box-shadow:0 4px 12px rgba(24,90,189,0.3);transition:transform 0.15s;display:none;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">📥 Word (DOC)</button>
                     <button onclick="document.getElementById('attemptDetailModal').remove()" style="padding:10px 24px;background:#374151;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px;">Ёпиш</button>
                 </div>
             </div>`;
@@ -291,11 +292,119 @@ const Employees = {
             html += `</div>`;
             content.innerHTML = html;
 
+            // Save data for Word export & show the Word button
+            Employees.currentAttemptData = data;
+            const wordBtn = document.getElementById('downloadWordBtn');
+            if (wordBtn) wordBtn.style.display = 'inline-block';
+
         } catch (err) {
             const content = document.getElementById('attemptDetailContent');
             if (content) {
                 content.innerHTML = `<div style="text-align:center;padding:40px;color:#dc2626;font-weight:700;">Хатолик: ${err.message}</div>`;
             }
         }
+    },
+
+    downloadWordReport() {
+        const data = this.currentAttemptData;
+        if (!data) return;
+
+        let docHtml = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+            <meta charset='utf-8'>
+            <title>Тест натижалари - ${data.employee_name || ''}</title>
+            <style>
+                body { font-family: 'Segoe UI', Arial, sans-serif; color: #111827; }
+                .header-card { background-color: #1e3a5f; color: #ffffff; padding: 20px; border-radius: 12px; margin-bottom: 24px; }
+                .question-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; margin-bottom: 16px; background-color: #ffffff; }
+                .question-header { font-size: 13px; font-weight: bold; color: #2563eb; border-bottom: 1px solid #f3f4f6; padding-bottom: 6px; margin-bottom: 8px; }
+                .question-text { font-size: 14px; font-weight: bold; margin-bottom: 12px; }
+                .option { padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 6px; font-weight: 600; display: block; }
+                .correct { background-color: #dcfce7; border: 1px solid #22c55e; color: #14532d; }
+                .incorrect { background-color: #fee2e2; border: 1px solid #ef4444; color: #7f1d1d; }
+                .correct-hint { background-color: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+                .normal { background-color: #f9fafb; border: 1px solid #e5e7eb; color: #374151; }
+                .badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+                .badge-success { background-color: #dcfce7; color: #166534; }
+                .badge-danger { background-color: #fee2e2; color: #991b1b; }
+                .badge-warning { background-color: #ffedd5; color: #c2410c; }
+            </style>
+        </head>
+        <body>
+            <div class="header-card">
+                <h2 style="margin:0;">${data.employee_name || '—'}</h2>
+                <p style="margin:4px 0 0 0;">🏢 Филиал: ${data.branch_name || '—'}</p>
+                <p style="margin:4px 0 0 0;">📚 Мавзу: ${data.topic_name || '—'} (${data.attempt_number}-уриниш)</p>
+                <p style="margin:10px 0 0 0;font-size:16px;font-weight:bold;">Натижа: ${data.score} / 15 (${data.percentage}%) | Вақт: ${data.duration}</p>
+            </div>
+            
+            <h3 style="margin-bottom:16px;">Савол ва жавоблар таҳлили:</h3>
+        `;
+
+        data.questions.forEach(q => {
+            let badgeText = '✅ Тўғри';
+            let badgeClass = 'badge-success';
+            if (!q.is_correct) {
+                if (q.answer_status === 'TIMEOUT') {
+                    badgeText = '⏱️ Вақт тугади';
+                    badgeClass = 'badge-warning';
+                } else {
+                    badgeText = '❌ Нотоғри';
+                    badgeClass = 'badge-danger';
+                }
+            }
+
+            docHtml += `
+            <div class="question-card">
+                <div class="question-header">
+                    Савол ${q.display_order} / 15 <span style="float:right;">⏱️ ${q.response_time_sec} сония | <span class="badge ${badgeClass}">${badgeText}</span></span>
+                </div>
+                <div class="question-text">${q.question_text || ''}</div>
+                <div style="margin-top:8px;">
+            `;
+
+            (q.options || []).forEach(opt => {
+                let optClass = 'normal';
+                let suffix = '';
+                if (opt.is_selected && opt.is_correct) {
+                    optClass = 'correct';
+                    suffix = ' [Ходим танлаган (Тўғри)]';
+                } else if (opt.is_selected && !opt.is_correct) {
+                    optClass = 'incorrect';
+                    suffix = ' [Ходим танлаган (Нотоғри)]';
+                } else if (!opt.is_selected && opt.is_correct) {
+                    optClass = 'correct-hint';
+                    suffix = ' [Тўғри жавоб]';
+                }
+
+                docHtml += `
+                    <div class="option ${optClass}">
+                        ${opt.label}) ${opt.text} ${suffix}
+                    </div>
+                `;
+            });
+
+            docHtml += `
+                </div>
+            </div>
+            `;
+        });
+
+        docHtml += `
+        </body>
+        </html>
+        `;
+
+        const blob = new Blob(['\ufeff' + docHtml], { type: 'application/msword' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Test_Result_${data.employee_name.replace(/\s+/g, '_')}_Topic_${data.attempt_number}.doc`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 };
+
