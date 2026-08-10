@@ -6,7 +6,7 @@ from app.services import topic_service
 
 router = APIRouter(tags=["topics"], dependencies=[Depends(get_current_admin)])
 
-@router.get("/")
+@router.get("")
 async def list_topics(db: AsyncSession = Depends(get_db)):
     topics = await topic_service.get_active_topics_ordered(db)
     from app.services.topic_service import get_topic_active_question_count
