@@ -1,9 +1,9 @@
+import uuid
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, text
 from app.models.employee import Employee
-from datetime import datetime
-import pytz
 
 
 async def get_or_create_employee(db: AsyncSession, telegram_user_id: int) -> tuple[Employee, bool]:
@@ -23,26 +23,46 @@ async def get_or_create_employee(db: AsyncSession, telegram_user_id: int) -> tup
     await db.refresh(employee)
     return employee, True
 
-async def update_registration(db: AsyncSession, telegram_user_id: int, full_name: str, branch_id: str, phone: str) -> Employee:
+
+async def update_registration(
+    db: AsyncSession, 
+    telegram_user_id: int, 
+    full_name: str, 
+    branch_id: str | uuid.UUID | None, 
+    phone: str
+) -> Employee:
     result = await db.execute(select(Employee).filter(Employee.telegram_user_id == telegram_user_id))
     employee = result.scalar_one_or_none()
     if employee:
+        # Convert branch_id string to uuid.UUID if needed
+        val_branch_uuid = None
+        if branch_id:
+            if isinstance(branch_id, uuid.UUID):
+                val_branch_uuid = branch_id
+            else:
+                try:
+                    val_branch_uuid = uuid.UUID(str(branch_id))
+                except (ValueError, TypeError):
+                    val_branch_uuid = None
+
         employee.full_name = full_name
-        employee.branch_id = branch_id
+        employee.branch_id = val_branch_uuid
         employee.phone = phone
         employee.registration_state = "REGISTERED"
-        employee.registered_at = datetime.utcnow().replace(tzinfo=pytz.utc)
+        employee.registered_at = datetime.now(timezone.utc)
         await db.commit()
         await db.refresh(employee)
     return employee
+
 
 async def get_employee_by_telegram_id(db: AsyncSession, telegram_user_id: int) -> Employee | None:
     result = await db.execute(select(Employee).filter(Employee.telegram_user_id == telegram_user_id))
     return result.scalar_one_or_none()
 
+
 async def get_employee_full_detail(db: AsyncSession, employee_id: str) -> dict:
-    # Requires deep joins, simplified mock dict structure here
     return {"employee_id": employee_id}
+
 
 async def list_employees(db: AsyncSession, filters: dict, page: int, page_size: int) -> tuple[list, int]:
     query = select(Employee)
@@ -53,38 +73,31 @@ async def list_employees(db: AsyncSession, filters: dict, page: int, page_size: 
     result = await db.execute(query)
     return result.scalars().all(), total_count
 
+
 async def delete_employee_cascade(db: AsyncSession, employee_id: str) -> bool:
     """Xodimni va unga tegishli barcha ma'lumotlarni to'liq o'chiradi."""
     try:
         eid = employee_id
-        # 1. attempt_questions → test_attempts (this employee)
         await db.execute(text("""
             DELETE FROM attempt_questions WHERE attempt_id IN (
                 SELECT id FROM test_attempts WHERE employee_id = :eid
             )
         """), {"eid": eid})
 
-        # 2. employee_topic_questions → employee_topic_assignments (this employee)
         await db.execute(text("""
             DELETE FROM employee_topic_questions WHERE assignment_id IN (
                 SELECT id FROM employee_topic_assignments WHERE employee_id = :eid
             )
         """), {"eid": eid})
 
-        # 3. Null out circular FKs in employee_topic_assignments
         await db.execute(text("""
             UPDATE employee_topic_assignments
             SET attempt1_id = NULL, attempt2_id = NULL
             WHERE employee_id = :eid
         """), {"eid": eid})
 
-        # 4. Delete test_attempts
         await db.execute(text("DELETE FROM test_attempts WHERE employee_id = :eid"), {"eid": eid})
-
-        # 5. Delete employee_topic_assignments
         await db.execute(text("DELETE FROM employee_topic_assignments WHERE employee_id = :eid"), {"eid": eid})
-
-        # 6. Delete employee
         await db.execute(text("DELETE FROM employees WHERE id = :eid"), {"eid": eid})
 
         await db.commit()
