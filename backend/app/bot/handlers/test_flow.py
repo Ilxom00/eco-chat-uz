@@ -32,6 +32,34 @@ async def start_test(update: Update, context: ContextTypes.DEFAULT_TYPE):
         attempt_number = 1
         attempt_data = await bot_api.start_attempt(user_id, topic_id, attempt_number)
         
+        # If attempt already exists — resume it automatically
+        err_msg = attempt_data.get("error", "")
+        if "already exists" in str(err_msg).lower():
+            # Try to get current question from existing attempt
+            try:
+                resume_data = await bot_api.get_employee_topic_status(user_id, topic_id)
+                existing_attempt_id = resume_data.get("attempt1_id") or resume_data.get("in_progress_attempt_id")
+                if existing_attempt_id:
+                    context.user_data['attempt_id'] = existing_attempt_id
+                    res = await bot_api.get_current_question(existing_attempt_id)
+                    question_data = res.get("question")
+                    if question_data:
+                        await show_question(update, context, question_data)
+                        return TEST_IN_PROGRESS
+                    else:
+                        # Attempt already completed
+                        results = await bot_api.get_attempt_results(existing_attempt_id)
+                        return await show_attempt_results(update, context, results)
+            except Exception as e2:
+                logger.warning("Could not resume attempt: %s", e2)
+            # Fallback message
+            err_display = "⚠️ Бу мавзуда тест аллақачон бошланган. Тестлар рўйхатига қайтяпмиз."
+            if query:
+                await query.edit_message_text(err_display)
+            else:
+                await update.message.reply_text(err_display)
+            return TOPIC_SELECT
+
         if "error" in attempt_data or not attempt_data.get("attempt_id"):
             err_msg = attempt_data.get("error", "Тестни бошлашда хатолик юз берди.")
             if "completed first" in str(err_msg).lower() or "permissionerror" in str(err_msg).lower():
