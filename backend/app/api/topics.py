@@ -1,14 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.database import get_db
+from app.database import get_db, engine
 from app.api.deps import get_current_admin
 from app.services import topic_service
+from app.seeds.seed import seed_topics_and_questions
 
 router = APIRouter(tags=["topics"], dependencies=[Depends(get_current_admin)])
 
 @router.get("")
 async def list_topics(db: AsyncSession = Depends(get_db)):
     topics = await topic_service.get_active_topics_ordered(db)
+    
+    # Auto-seed if empty
+    if not topics:
+        await seed_topics_and_questions(engine, force=True)
+        topics = await topic_service.get_active_topics_ordered(db)
+
     from app.services.topic_service import get_topic_active_question_count
     result = []
     for t in topics:
@@ -21,6 +28,11 @@ async def list_topics(db: AsyncSession = Depends(get_db)):
             "is_active": t.is_active,
         })
     return result
+
+@router.post("/reseed")
+async def reseed_topics():
+    res = await seed_topics_and_questions(engine, force=True)
+    return {"success": True, "message": "114 ta savol qayta юкланди"}
 
 @router.post("/")
 async def create_topic(data: dict, db: AsyncSession = Depends(get_db)):
@@ -37,7 +49,7 @@ async def update_topic(id: str, data: dict, db: AsyncSession = Depends(get_db)):
     return {"message": "Updated"}
 
 @router.patch("/{id}/archive")
-async def archive_topic(id: str, db: AsyncSession = Depends(get_db)):
+async def archive_topic(id: str, data: dict, db: AsyncSession = Depends(get_db)):
     return {"message": "Archived"}
 
 @router.patch("/{id}/reorder")
