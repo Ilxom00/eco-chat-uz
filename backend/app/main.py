@@ -138,8 +138,8 @@ async def lifespan(app: FastAPI):
                     )
 
         from app.seeds.seed import seed_topics_and_questions
-        await seed_topics_and_questions(engine, force=False)
-        logger.info("✅ 4 та кирилл мавзу ва саволлар синк қилинди")
+        await seed_topics_and_questions(engine, force=True)
+        logger.info("✅ 4 та кирилл мавзу ва 114 та савол (А, Б, В, Г вариантлар) пўлиқ инвентаризация ва синк қилинди")
     except Exception as e:
         logger.error("❌ Topic seeding failed: {}", e)
 
