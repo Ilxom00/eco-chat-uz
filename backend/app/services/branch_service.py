@@ -34,25 +34,25 @@ async def resolve_branch_id(
     db: AsyncSession,
     branch_id: Optional[str | uuid.UUID] = None,
     branch_name: Optional[str] = None
-) -> Optional[uuid.UUID]:
+) -> Optional[str]:
     """
-    Safely resolve branch UUID using ORM queries only.
-    NEVER uses raw text() queries with UUID params to avoid asyncpg type errors.
+    Safely resolve branch ID as STRING.
+    Returns str(uuid) — works for BOTH SQLite (String(36)) and PostgreSQL (UUID auto-cast).
     """
     bid_str = str(branch_id).strip() if branch_id else None
 
-    # 1. If already a uuid.UUID, return directly
+    # 1. If already a uuid.UUID, return as string
     if isinstance(branch_id, uuid.UUID):
-        return branch_id
+        return str(branch_id)
 
     # 2. Try parsing string as UUID and look up via ORM
     if bid_str:
         try:
             bid_uuid = uuid.UUID(bid_str)
-            result = await db.execute(select(Branch).filter(Branch.id == bid_uuid))
+            result = await db.execute(select(Branch).filter(Branch.id == str(bid_uuid)))
             branch = result.scalar_one_or_none()
             if branch:
-                return branch.id
+                return str(branch.id)
         except (ValueError, TypeError):
             pass  # Not a valid UUID string, try other methods
 
@@ -65,7 +65,7 @@ async def resolve_branch_id(
             )
             branch = result.scalar_one_or_none()
             if branch:
-                return branch.id
+                return str(branch.id)
         except (ValueError, IndexError):
             pass
 
@@ -75,13 +75,13 @@ async def resolve_branch_id(
         result = await db.execute(select(Branch).filter(Branch.name == query_name))
         branch = result.scalar_one_or_none()
         if branch:
-            return branch.id
+            return str(branch.id)
 
         # Fuzzy match
         result = await db.execute(select(Branch).filter(Branch.name.ilike(f"%{query_name}%")))
         branch = result.scalars().first()
         if branch:
-            return branch.id
+            return str(branch.id)
 
     # 5. Fallback: first active branch via ORM
     result = await db.execute(
@@ -89,16 +89,16 @@ async def resolve_branch_id(
     )
     branch = result.scalar_one_or_none()
     if branch:
-        return branch.id
+        return str(branch.id)
 
     return None
 
 
 async def get_branch_by_id(db: AsyncSession, branch_id: str) -> Optional[Branch]:
-    """Get branch by ID string. Safely converts to UUID for asyncpg compatibility."""
+    """Get branch by ID string. Works for both SQLite and PostgreSQL."""
     try:
-        bid_uuid = uuid.UUID(str(branch_id).strip())
-        result = await db.execute(select(Branch).filter(Branch.id == bid_uuid))
+        bid_str = str(uuid.UUID(str(branch_id).strip()))  # normalize to lowercase UUID string
+        result = await db.execute(select(Branch).filter(Branch.id == bid_str))
         return result.scalar_one_or_none()
     except (ValueError, TypeError):
         return None
