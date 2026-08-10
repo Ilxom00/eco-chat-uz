@@ -162,12 +162,14 @@ async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: in
             scores1 = []
             scores2 = []
 
+            total_duration_sec = 0
+
             for topic in topics:
                 topic_id = str(topic[0])
 
                 # Get attempt 1 and 2 scores
                 attempts = await db.execute(text("""
-                    SELECT id, attempt_number, score, status
+                    SELECT id, attempt_number, score, status, started_at, completed_at
                     FROM test_attempts
                     WHERE CAST(employee_id AS text) = :eid AND CAST(topic_id AS text) = :tid
                     ORDER BY attempt_number
@@ -187,6 +189,12 @@ async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: in
                 s1 = round(s1_raw / 15 * 100) if s1_raw is not None else None
                 s2 = round(s2_raw / 15 * 100) if s2_raw is not None else None
                 diff = (s2 - s1) if (s1 is not None and s2 is not None) else None
+
+                # Sum attempt durations in seconds
+                if att1 and att1[4] and att1[5]:
+                    total_duration_sec += (att1[5] - att1[4]).total_seconds()
+                if att2 and att2[4] and att2[5]:
+                    total_duration_sec += (att2[5] - att2[4]).total_seconds()
 
                 if s1 is not None and s2 is not None:
                     scores1.append(s1)
@@ -224,6 +232,7 @@ async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: in
                 "name": emp_name,
                 "branch": branch_name,
                 "topics": topic_results,
+                "total_duration_sec": total_duration_sec,
                 "total": {
                     "avg1": avg1,
                     "avg2": avg2,
