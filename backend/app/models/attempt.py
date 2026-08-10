@@ -1,5 +1,5 @@
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, UniqueConstraint, CheckConstraint, Index
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, UniqueConstraint, CheckConstraint, Index, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from .base import BaseModel
 
@@ -49,7 +49,7 @@ class EmployeeTopicQuestion(BaseModel):
     question_id = Column(UUID(as_uuid=True), ForeignKey('questions.id'), nullable=False)
     base_slot = Column(Integer, nullable=False)
     question_text_snapshot = Column(String, nullable=False)
-    answers_snapshot = Column(JSONB, nullable=False)
+    answers_snapshot = Column(JSON, nullable=False)
     correct_answer_id = Column(UUID(as_uuid=True), ForeignKey('question_answers.id'), nullable=False)
     
     __table_args__ = (
@@ -64,7 +64,7 @@ class AttemptQuestion(BaseModel):
     assignment_question_id = Column(UUID(as_uuid=True), ForeignKey('employee_topic_questions.id'), nullable=False)
     question_id = Column(UUID(as_uuid=True), ForeignKey('questions.id'), nullable=False)
     display_order = Column(Integer, nullable=False)
-    answer_display_order = Column(JSONB, nullable=False)
+    answer_display_order = Column(JSON, nullable=False)
     question_started_at = Column(DateTime(timezone=True), nullable=True)
     question_deadline_at = Column(DateTime(timezone=True), nullable=True)
     answered_at = Column(DateTime(timezone=True), nullable=True)
