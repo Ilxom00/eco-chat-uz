@@ -6,26 +6,29 @@ const Topics = {
     async loadTopics() {
         const container = document.getElementById('topicsList');
         if (!container) return;
-        container.innerHTML = '<div style="padding:20px;color:var(--text-secondary)">Yuklanmoqda...</div>';
+        container.innerHTML = '<div style="padding:20px;color:var(--text-secondary)">Юкланмоқда...</div>';
 
         try {
             const topics = await API.getTopics();
 
             if (!topics || topics.length === 0) {
-                container.innerHTML = '<div style="padding:20px;color:var(--text-secondary)">Mavzular yo\'q. Yangi mavzu qo\'shing.</div>';
+                container.innerHTML = '<div style="padding:20px;color:var(--text-secondary)">Мавзулар йўқ. Янги мавзу қўшинг.</div>';
                 return;
             }
 
-            container.innerHTML = topics.map(t => `
-                <div class="kpi-card topic-item" id="topic-${t.id}" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <div style="flex:1; cursor:pointer;" onclick="Questions.loadForTopic('${t.id}', '${t.short_name}')">
-                        <h3 style="margin:0 0 6px 0;">${t.short_name}</h3>
-                        <div style="font-size:14px; color:var(--text-secondary);">${t.full_name}</div>
+            container.innerHTML = topics.map((t, i) => `
+                <div class="kpi-card topic-item" id="topic-${t.id}" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-left:6px solid #16a34a; background:#fff; padding:16px 20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="flex:1; cursor:pointer;" onclick="Questions.loadForTopic('${t.id}', '${(t.short_name || '').replace(/'/g, "\\'")}')">
+                        <div style="font-size:11px;font-weight:700;color:#166534;letter-spacing:1px;margin-bottom:4px;">${i + 1}-МАВЗУ</div>
+                        <h3 style="margin:0 0 4px 0;font-size:16px;color:#111827;">${t.short_name}</h3>
+                        <div style="font-size:13px; color:#6b7280; font-weight:500;">${t.full_name}</div>
                     </div>
-                    <div style="display:flex; align-items:center; gap:12px; flex-shrink:0;">
-                        <div class="badge badge-success">${t.q_count} савол</div>
+                    <div style="display:flex; align-items:center; gap:16px; flex-shrink:0;">
+                        <span style="background:#dcfce7;color:#166534;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;">
+                            ${t.q_count} та савол
+                        </span>
                         <button 
-                            onclick="Topics.confirmDelete('${t.id}', '${t.short_name}')" 
+                            onclick="Topics.confirmDelete('${t.id}', '${(t.short_name || '').replace(/'/g, "\\'")}')" 
                             style="
                                 background: linear-gradient(135deg, #dc2626, #b91c1c);
                                 color: white;
@@ -38,24 +41,23 @@ const Topics = {
                                 display: flex;
                                 align-items: center;
                                 gap: 6px;
-                                transition: all 0.2s;
+                                transition: transform 0.15s;
                             "
-                            onmouseover="this.style.transform='scale(1.05)'"
+                            onmouseover="this.style.transform='scale(1.04)'"
                             onmouseout="this.style.transform='scale(1)'"
                         >
-                            🗑️ O'chirish
+                            🗑️ Ўчириш
                         </button>
                     </div>
                 </div>
             `).join('');
         } catch (e) {
-            container.innerHTML = `<div style="padding:20px;color:var(--danger)">Xato: ${e.message}</div>`;
+            container.innerHTML = `<div style="padding:20px;color:var(--danger)">Хатолик: ${e.message}</div>`;
             console.error(e);
         }
     },
 
     confirmDelete(topicId, topicName) {
-        // Create confirmation modal
         const existing = document.getElementById('deleteTopicModal');
         if (existing) existing.remove();
 
@@ -68,33 +70,31 @@ const Topics = {
         `;
         modal.innerHTML = `
             <div style="
-                background: var(--bg-card, #fff);
+                background: #fff;
                 border-radius: 16px;
                 padding: 32px;
                 max-width: 440px;
                 width: 90%;
                 box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                animation: slideIn 0.2s ease;
+                text-align: center;
             ">
-                <div style="text-align:center; margin-bottom:20px;">
-                    <div style="font-size:48px; margin-bottom:12px;">⚠️</div>
-                    <h2 style="margin:0 0 8px 0; color: var(--danger, #dc2626);">O'chirishni tasdiqlang</h2>
-                    <p style="color:var(--text-secondary); margin:0; font-size:15px;">
-                        <strong>"${topicName}"</strong> mavzusini o'chirasizmi?<br>
-                        <span style="color:var(--danger, #dc2626); font-weight:600;">
-                            Barcha savollar, natijalar va bog'liq ma'lumotlar ham o'chadi!
-                        </span>
-                    </p>
-                </div>
+                <div style="font-size:48px; margin-bottom:12px;">⚠️</div>
+                <h2 style="margin:0 0 8px 0; color: #dc2626;">Ўчиришни тасдиқланг</h2>
+                <p style="color:#6b7280; margin:0 0 20px; font-size:15px; line-height:1.5;">
+                    <strong style="color:#111827;">"${topicName}"</strong> мавзусини ўчирасизми?<br>
+                    <span style="color:#dc2626; font-weight:600;">
+                        Барча саволлар, натижалар ва боғлиқ маълумотлар ҳам ўчади!
+                    </span>
+                </p>
                 <div style="display:flex; gap:12px; justify-content:center;">
                     <button 
                         onclick="document.getElementById('deleteTopicModal').remove()"
                         style="
-                            padding: 12px 24px; border-radius: 8px; border: 2px solid var(--border, #e5e7eb);
+                            padding: 12px 24px; border-radius: 8px; border: 2px solid #e5e7eb;
                             background: transparent; cursor: pointer; font-size: 15px; font-weight: 600;
-                            color: var(--text-secondary); transition: all 0.2s;
+                            color: #374151;
                         "
-                    >Bekor qilish</button>
+                    >Бекор қилиш</button>
                     <button 
                         id="confirmDeleteBtn"
                         onclick="Topics.executDelete('${topicId}')"
@@ -102,9 +102,8 @@ const Topics = {
                             padding: 12px 24px; border-radius: 8px; border: none;
                             background: linear-gradient(135deg, #dc2626, #b91c1c);
                             color: white; cursor: pointer; font-size: 15px; font-weight: 600;
-                            transition: all 0.2s;
                         "
-                    >🗑️ Ha, o'chirish</button>
+                    >🗑️ Ҳа, ўчириш</button>
                 </div>
             </div>
         `;
@@ -114,24 +113,16 @@ const Topics = {
 
     async executDelete(topicId) {
         const btn = document.getElementById('confirmDeleteBtn');
-        if (btn) { btn.textContent = 'O\'chirilmoqda...'; btn.disabled = true; }
+        if (btn) { btn.textContent = 'Ўчирилмоқда...'; btn.disabled = true; }
 
         try {
             await API.deleteTopic(topicId);
-
-            // Close modal
-            const modal = document.getElementById('deleteTopicModal');
-            if (modal) modal.remove();
-
-            // Show success toast
-            Topics.showToast('✅ Mavzu muvaffaqiyatli o\'chirildi!', 'success');
-
-            // Reload topics list
+            document.getElementById('deleteTopicModal')?.remove();
+            Topics.showToast('✅ Мавзу муваффақиятли ўчирилди!', 'success');
             await this.loadTopics();
         } catch (e) {
-            const modal = document.getElementById('deleteTopicModal');
-            if (modal) modal.remove();
-            Topics.showToast(`❌ Xato: ${e.message}`, 'error');
+            document.getElementById('deleteTopicModal')?.remove();
+            Topics.showToast(`❌ Хато: ${e.message}`, 'error');
             console.error(e);
         }
     },
@@ -144,7 +135,6 @@ const Topics = {
             background: ${type === 'success' ? '#16a34a' : '#dc2626'};
             color: white; font-size: 14px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-            animation: slideIn 0.3s ease;
         `;
         toast.textContent = msg;
         document.body.appendChild(toast);
@@ -164,38 +154,38 @@ const Topics = {
         `;
         modal.innerHTML = `
             <div style="
-                background: var(--bg-card, #fff);
+                background: #fff;
                 border-radius: 16px;
                 padding: 32px;
                 max-width: 480px;
                 width: 90%;
                 box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             ">
-                <h2 style="margin:0 0 20px 0;">+ Yangi mavzu</h2>
+                <h2 style="margin:0 0 20px 0;">+ Янги мавзу қўшиш</h2>
                 <div style="margin-bottom:16px;">
-                    <label style="display:block; margin-bottom:6px; font-weight:600;">Qisqa nomi</label>
-                    <input id="topicShortName" type="text" placeholder="Masalan: Ekologiya" style="
+                    <label style="display:block; margin-bottom:6px; font-weight:600;">Қисқа номи</label>
+                    <input id="topicShortName" type="text" placeholder="Масалан: Экология" style="
                         width:100%; padding:10px 14px; border-radius:8px;
-                        border:2px solid var(--border, #e5e7eb); font-size:15px; box-sizing:border-box;
+                        border:2px solid #e5e7eb; font-size:15px; box-sizing:border-box;
                     ">
                 </div>
                 <div style="margin-bottom:24px;">
-                    <label style="display:block; margin-bottom:6px; font-weight:600;">To'liq nomi</label>
-                    <input id="topicFullName" type="text" placeholder="Masalan: Ekologiya va atrof-muhit muhofazasi" style="
+                    <label style="display:block; margin-bottom:6px; font-weight:600;">Тўлиқ номи</label>
+                    <input id="topicFullName" type="text" placeholder="Масалан: Экологик экспертиза асослари" style="
                         width:100%; padding:10px 14px; border-radius:8px;
-                        border:2px solid var(--border, #e5e7eb); font-size:15px; box-sizing:border-box;
+                        border:2px solid #e5e7eb; font-size:15px; box-sizing:border-box;
                     ">
                 </div>
                 <div style="display:flex; gap:12px; justify-content:flex-end;">
                     <button onclick="document.getElementById('createTopicModal').remove()"
-                        style="padding:10px 20px; border-radius:8px; border:2px solid var(--border, #e5e7eb);
+                        style="padding:10px 20px; border-radius:8px; border:2px solid #e5e7eb;
                         background:transparent; cursor:pointer; font-size:14px; font-weight:600;">
-                        Bekor
+                        Бекор қилиш
                     </button>
-                    <button onclick="Topics.submitCreate()"
+                    <button id="saveTopicBtn" onclick="Topics.submitCreate()"
                         style="padding:10px 20px; border-radius:8px; border:none;
-                        background:var(--primary, #166534); color:white; cursor:pointer; font-size:14px; font-weight:600;">
-                        Saqlash
+                        background:#166534; color:white; cursor:pointer; font-size:14px; font-weight:700;">
+                        Сақлаш
                     </button>
                 </div>
             </div>
@@ -208,22 +198,36 @@ const Topics = {
     async submitCreate() {
         const short = document.getElementById('topicShortName').value.trim();
         const full = document.getElementById('topicFullName').value.trim();
-        if (!short || !full) { alert('Iltimos, ikkala maydonni ham to\'ldiring!'); return; }
+        if (!short || !full) { alert('Илтимос, иккала майдонни ҳам тўлдиринг!'); return; }
+
+        const btn = document.getElementById('saveTopicBtn');
+        if (btn) { btn.textContent = 'Сақланмоқда...'; btn.disabled = true; }
 
         try {
             await API.createTopic({ short_name: short, full_name: full });
-            document.getElementById('createTopicModal').remove();
-            Topics.showToast('✅ Mavzu yaratildi!', 'success');
+            document.getElementById('createTopicModal')?.remove();
+            Topics.showToast('✅ Янги мавзу муваффақиятли яратилди!', 'success');
             await this.loadTopics();
         } catch (e) {
-            alert('Xato: ' + e.message);
+            if (btn) { btn.textContent = 'Сақлаш'; btn.disabled = false; }
+            alert('Хатолик: ' + (e.message || e));
         }
     }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    Topics.init();
+
+    // Listen to nav button clicks
     const btn = document.querySelector('[data-target="topics"]');
     if (btn) {
         btn.addEventListener('click', () => Topics.init());
     }
+
+    // Listen to hash changes
+    window.addEventListener('hashchange', () => {
+        if (window.location.hash === '#topics') {
+            Topics.init();
+        }
+    });
 });
