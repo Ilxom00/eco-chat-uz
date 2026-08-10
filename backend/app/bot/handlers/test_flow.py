@@ -1,12 +1,9 @@
 """
 test_flow.py — Telegram Bot Test Flow Handler
-FIXES:
-  - Answer text in MESSAGE BODY (full text, no truncation)
-  - Buttons: [А][Б] / [В][Г] short labels only
-  - asyncio.Task cancellation prevents repeated question display
-  - Idempotent double-tap detection
-  - 60s timer, auto-advance on timeout
-  - 🎉 fireworks on correct (1.5s), ❌ on wrong (1s)
+ROOT BUG FIX:
+  callback_data = ans:{question_display_order}:{answer_uuid}
+  Previously was ans:{answer_idx+1}:{answer_uuid} which caused wrong question lookup!
+  Now question display_order (1-15) is embedded in callback, matching AttemptQuestion.display_order.
 """
 import logging
 import asyncio
@@ -35,7 +32,6 @@ def _cancel_countdown(context: ContextTypes.DEFAULT_TYPE):
 # ─── Build question message text ──────────────────────────────────────────────
 def _build_msg(qdata: dict, remaining: int) -> str:
     current = qdata.get("current_index", qdata.get("display_order", 1))
-    total = 15
     q_text = qdata.get("question_text", "")
     answers = qdata.get("answers", [])
     answers_text = format_answers_text(answers)
@@ -46,9 +42,9 @@ def _build_msg(qdata: dict, remaining: int) -> str:
     bar = "🟩" * filled + "⬜" * empty
 
     return (
-        f"📝 <b>Савол {current} / {total}:</b>\n\n"
+        f"📝 <b>Савол {current} / 15:</b>\n\n"
         f"{q_text}\n\n"
-        f"━━━━━━━━━━━━━━━\n"
+        f"━━━━━━━━━━━━\n"
         f"{answers_text}\n\n"
         f"⏱ <i>Вақт: {remaining} сония</i>  {bar}"
     )
@@ -67,8 +63,6 @@ async def _run_countdown(
 ):
     try:
         update_interval = 5
-        current = qdata.get("current_index", 1)
-        total = 15
 
         while True:
             await asyncio.sleep(update_interval)
@@ -79,13 +73,14 @@ async def _run_countdown(
                     chat_id=chat_id,
                     message_id=msg_id,
                     text=_build_msg(qdata, remaining),
-                    reply_markup=get_answer_keyboard(qdata.get("answers", [])),
+                    # Pass question display_order to keyboard so callback is correct
+                    reply_markup=get_answer_keyboard(qdata.get("answers", []), display_order),
                     parse_mode="HTML",
                 )
             except asyncio.CancelledError:
                 raise
             except Exception:
-                pass  # Already edited or deleted
+                pass
 
             if remaining <= 0:
                 break
@@ -96,7 +91,7 @@ async def _run_countdown(
                 chat_id=chat_id,
                 message_id=msg_id,
                 text=(
-                    f"📝 <b>Савол {current} / {total}:</b>\n\n"
+                    f"📝 <b>Савол {qdata.get('current_index', display_order)} / 15:</b>\n\n"
                     f"{qdata.get('question_text', '')}\n\n"
                     f"⌛ <b>Вақт тугади!</b>"
                 ),
@@ -107,7 +102,6 @@ async def _run_countdown(
 
         await asyncio.sleep(1.5)
 
-        # Auto-advance via server timeout handler
         res = await bot_api.handle_timeout(aq_id)
 
         if res.get("attempt_completed"):
@@ -125,14 +119,14 @@ async def _run_countdown(
             next_q = res.get("next_question")
             if next_q and next_q.get("question_text"):
                 new_dl = time.time() + QUESTION_TIMER
+                dorder = next_q.get("display_order", display_order + 1)
+                aq_next = next_q.get("attempt_question_id", "")
                 new_msg = await context.bot.send_message(
                     chat_id=chat_id,
                     text=_build_msg(next_q, QUESTION_TIMER),
-                    reply_markup=get_answer_keyboard(next_q.get("answers", [])),
+                    reply_markup=get_answer_keyboard(next_q.get("answers", []), dorder),
                     parse_mode="HTML",
                 )
-                dorder = next_q.get("display_order", display_order + 1)
-                aq_next = next_q.get("attempt_question_id", "")
                 context.user_data["current_msg_id"] = new_msg.message_id
                 task = asyncio.create_task(_run_countdown(
                     context, chat_id, new_msg.message_id,
@@ -154,7 +148,6 @@ async def show_question(
     if not question_data or not question_data.get("question_text"):
         return await show_attempt_results(update, context, {})
 
-    # Cancel previous countdown FIRST
     _cancel_countdown(context)
 
     aq_id = question_data.get("attempt_question_id", "")
@@ -162,7 +155,8 @@ async def show_question(
 
     deadline_unix = time.time() + QUESTION_TIMER
     text = _build_msg(question_data, QUESTION_TIMER)
-    keyboard = get_answer_keyboard(question_data.get("answers", []))
+    # CRITICAL: pass display_order so callback_data = ans:{display_order}:{uuid}
+    keyboard = get_answer_keyboard(question_data.get("answers", []), display_order)
 
     chat_id = update.effective_chat.id
     if update.callback_query:
@@ -181,7 +175,6 @@ async def show_question(
 
     context.user_data["current_msg_id"] = msg.message_id
 
-    # Start countdown task
     if attempt_id and aq_id:
         task = asyncio.create_task(_run_countdown(
             context, chat_id, msg.message_id,
@@ -278,19 +271,20 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(parts) < 3:
         return TEST_IN_PROGRESS
 
-    order = int(parts[1])
+    # parts[1] = question display_order (1-15), parts[2] = answer UUID
+    question_order = int(parts[1])
     answer_id = parts[2]
     attempt_id = context.user_data.get("attempt_id")
 
-    # CRITICAL: Cancel countdown IMMEDIATELY before anything else
+    # Cancel countdown IMMEDIATELY
     _cancel_countdown(context)
 
     try:
-        result = await bot_api.submit_answer(attempt_id, order, answer_id)
+        result = await bot_api.submit_answer(attempt_id, question_order, answer_id)
 
-        # IDEMPOTENT: double-tap or already answered → ignore silently
+        # Idempotent: double-tap or already answered — ignore silently
         if result.get("idempotent_response"):
-            logger.debug("Idempotent answer for order=%s, ignoring", order)
+            logger.debug("Idempotent answer for q=%s, ignoring", question_order)
             return TEST_IN_PROGRESS
 
         is_correct = result.get("is_correct", False)
@@ -323,7 +317,6 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if next_q and next_q.get("question_text"):
             await show_question(update, context, next_q, attempt_id)
         else:
-            # Fallback: get from server
             try:
                 res = await bot_api.get_current_question(attempt_id)
                 next_q2 = res.get("question")
