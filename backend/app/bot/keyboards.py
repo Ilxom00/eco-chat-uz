@@ -24,18 +24,21 @@ def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 
-def get_answer_keyboard(answers: list) -> InlineKeyboardMarkup:
+def get_answer_keyboard(answers: list, question_order: int = 1) -> InlineKeyboardMarkup:
     """
-    Answers shown in MESSAGE TEXT (full), buttons only have short labels А/Б/В/Г.
-    This prevents any text truncation in Telegram inline buttons.
-    Returns keyboard with 2 buttons per row: [А][Б] / [В][Г]
+    Buttons: [А][Б] / [В][Г]  — short labels only.
+    callback_data = ans:{question_order}:{answer_uuid}
+    question_order is the question's display_order (1-15), NOT answer button index.
     """
     labels = ['А', 'Б', 'В', 'Г']
     row1 = []
     row2 = []
     for idx, answer in enumerate(answers):
         label = labels[idx] if idx < len(labels) else str(idx + 1)
-        btn = InlineKeyboardButton(f"  {label}  ", callback_data=f"ans:{idx+1}:{answer['id']}")
+        btn = InlineKeyboardButton(
+            f"  {label}  ",
+            callback_data=f"ans:{question_order}:{answer['id']}"
+        )
         if idx < 2:
             row1.append(btn)
         else:
