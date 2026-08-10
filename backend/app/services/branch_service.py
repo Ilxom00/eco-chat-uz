@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import text, func
 from app.models.branch import Branch
-from app.models.employee import Employee
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +37,7 @@ async def resolve_branch_id(
 ) -> Optional[uuid.UUID]:
     """
     Safely resolve branch UUID using ORM queries only.
-    NEVER uses raw text() queries with string UUID params to avoid asyncpg type errors.
+    NEVER uses raw text() queries with UUID params to avoid asyncpg type errors.
     """
     bid_str = str(branch_id).strip() if branch_id else None
 
@@ -73,13 +72,12 @@ async def resolve_branch_id(
     # 4. Try exact name match via ORM
     query_name = branch_name or bid_str
     if query_name:
-        # Exact match first
         result = await db.execute(select(Branch).filter(Branch.name == query_name))
         branch = result.scalar_one_or_none()
         if branch:
             return branch.id
 
-        # Fuzzy/case-insensitive match
+        # Fuzzy match
         result = await db.execute(select(Branch).filter(Branch.name.ilike(f"%{query_name}%")))
         branch = result.scalars().first()
         if branch:
@@ -128,18 +126,17 @@ async def reorder_branch(db: AsyncSession, branch_id: str, direction: str) -> li
 
 
 async def delete_branch(db: AsyncSession, branch_id: str) -> bool:
-    """Delete branch and unlink employees."""
+    """Delete branch and unlink employees. Uses CAST to TEXT to avoid asyncpg UUID type issues."""
     try:
-        bid_uuid = uuid.UUID(str(branch_id).strip())
-        # Unlink employees using ORM
-        emps = await db.execute(select(Employee).filter(Employee.branch_id == bid_uuid))
-        for emp in emps.scalars().all():
-            emp.branch_id = None
-        # Delete branch using ORM
-        branch = await db.execute(select(Branch).filter(Branch.id == bid_uuid))
-        b = branch.scalar_one_or_none()
-        if b:
-            await db.delete(b)
+        bid = str(branch_id).strip()
+        await db.execute(
+            text("UPDATE employees SET branch_id = NULL WHERE CAST(branch_id AS TEXT) = :bid"),
+            {"bid": bid}
+        )
+        await db.execute(
+            text("DELETE FROM branches WHERE CAST(id AS TEXT) = :bid"),
+            {"bid": bid}
+        )
         await db.commit()
         return True
     except Exception as e:
@@ -148,11 +145,13 @@ async def delete_branch(db: AsyncSession, branch_id: str) -> bool:
 
 
 async def get_employee_count_in_branch(db: AsyncSession, branch_id: str) -> int:
+    """Count employees in branch. Uses CAST to TEXT to avoid asyncpg UUID type issues."""
     try:
-        bid_uuid = uuid.UUID(str(branch_id).strip())
+        bid = str(branch_id).strip()
         result = await db.execute(
-            select(func.count()).select_from(Employee).filter(Employee.branch_id == bid_uuid)
+            text("SELECT COUNT(*) FROM employees WHERE CAST(branch_id AS TEXT) = :bid"),
+            {"bid": bid}
         )
         return result.scalar() or 0
-    except (ValueError, TypeError):
+    except Exception:
         return 0
