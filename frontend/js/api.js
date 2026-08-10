@@ -53,9 +53,16 @@ const API = {
         const q = new URLSearchParams(params).toString();
         return this.fetch(`/dashboard/employees?${q}`);
     },
-    async getAttemptDetail(attemptId) {
-        return this.fetch(`/dashboard/attempts/${attemptId}/detail`);
+    async getAttemptDetail(attemptId, params = {}) {
+        const cleanParams = {};
+        if (params.emp_id) cleanParams.emp_id = params.emp_id;
+        if (params.topic_id) cleanParams.topic_id = params.topic_id;
+        if (params.attempt_num) cleanParams.attempt_num = params.attempt_num;
+        const q = new URLSearchParams(cleanParams).toString();
+        const id = (attemptId && attemptId !== 'null' && attemptId !== 'undefined') ? attemptId : 'by-topic';
+        return this.fetch(`/dashboard/attempts/${id}/detail${q ? '?' + q : ''}`);
     },
+
 
     async getEmployeeDetail(id) {
         return this.fetch(`/employees/${id}`);
