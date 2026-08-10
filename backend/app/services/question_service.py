@@ -11,13 +11,15 @@ from app.models.topic import Topic
 logger = logging.getLogger(__name__)
 
 
-def _to_uuid(val: str | uuid.UUID):
+def _force_uuid(val: str | uuid.UUID) -> uuid.UUID:
+    """Strictly convert string or UUID to a python uuid.UUID object."""
     if isinstance(val, uuid.UUID):
         return val
     try:
-        return uuid.UUID(str(val))
-    except (ValueError, TypeError):
-        return val
+        return uuid.UUID(str(val).strip())
+    except Exception as e:
+        logger.error("Could not parse UUID from '%s': %s", val, e)
+        raise ValueError(f"Яроқсиз UUID идентификатор: {val}")
 
 
 async def create_question_with_answers(db: AsyncSession, topic_id: str, text_content: str, answers: list[dict]) -> Question:
@@ -26,10 +28,10 @@ async def create_question_with_answers(db: AsyncSession, topic_id: str, text_con
     if sum(1 for a in answers if a.get("is_correct")) != 1:
         raise ValueError("Аниқ 1 та тўғри жавоб танланиши шарт")
         
-    tid_val = _to_uuid(topic_id)
+    tid_uuid = _force_uuid(topic_id)
 
-    # Verify topic exists in DB to prevent ForeignKeyViolation
-    res = await db.execute(select(Topic).filter(Topic.id == tid_val))
+    # Verify topic exists in DB to prevent Foreign Key errors
+    res = await db.execute(select(Topic).filter(Topic.id == tid_uuid))
     topic_obj = res.scalar_one_or_none()
     if not topic_obj:
         # Fallback: find first active topic in DB
@@ -37,13 +39,13 @@ async def create_question_with_answers(db: AsyncSession, topic_id: str, text_con
         first_t = res_first.scalars().first()
         if not first_t:
             raise ValueError("Мавзу базада топилмади. Илтимос, аввал янги мавзу яратинг.")
-        tid_val = first_t.id
+        tid_uuid = _force_uuid(first_t.id)
 
     question_uuid = uuid.uuid4()
     
     question = Question(
         id=question_uuid,
-        topic_id=tid_val,
+        topic_id=tid_uuid,
         text=text_content,
         status='ACTIVE'
     )
@@ -66,16 +68,16 @@ async def create_question_with_answers(db: AsyncSession, topic_id: str, text_con
 
 
 async def delete_question_permanent(db: AsyncSession, question_id: str) -> bool:
-    qid_val = _to_uuid(question_id)
-    await db.execute(text("DELETE FROM question_answers WHERE question_id = :qid"), {"qid": qid_val})
-    await db.execute(text("DELETE FROM questions WHERE id = :qid"), {"qid": qid_val})
+    qid_uuid = _force_uuid(question_id)
+    await db.execute(text("DELETE FROM question_answers WHERE question_id = :qid"), {"qid": qid_uuid})
+    await db.execute(text("DELETE FROM questions WHERE id = :qid"), {"qid": qid_uuid})
     await db.commit()
     return True
 
 
 async def archive_question(db: AsyncSession, question_id: str) -> Question:
-    qid_val = _to_uuid(question_id)
-    result = await db.execute(select(Question).filter(Question.id == qid_val))
+    qid_uuid = _force_uuid(question_id)
+    result = await db.execute(select(Question).filter(Question.id == qid_uuid))
     question = result.scalar_one_or_none()
     if question:
         question.status = 'ARCHIVED'
@@ -86,20 +88,20 @@ async def archive_question(db: AsyncSession, question_id: str) -> Question:
 
 
 async def get_active_questions_for_topic(db: AsyncSession, topic_id: str) -> list[Question]:
-    tid_val = _to_uuid(topic_id)
-    result = await db.execute(select(Question).filter(Question.topic_id == tid_val, Question.status == 'ACTIVE'))
+    tid_uuid = _force_uuid(topic_id)
+    result = await db.execute(select(Question).filter(Question.topic_id == tid_uuid, Question.status == 'ACTIVE'))
     return result.scalars().all()
 
 
 async def get_questions_for_topic_paginated(db: AsyncSession, topic_id: str, page: int, page_size: int, include_archived: bool = False) -> tuple[list, int]:
     try:
-        tid_val = _to_uuid(topic_id)
+        tid_uuid = _force_uuid(topic_id)
 
-        query = select(Question).filter(Question.topic_id == tid_val)
+        query = select(Question).filter(Question.topic_id == tid_uuid)
         if not include_archived:
             query = query.filter(Question.status == 'ACTIVE')
             
-        total_query = select(func.count()).select_from(Question).filter(Question.topic_id == tid_val)
+        total_query = select(func.count()).select_from(Question).filter(Question.topic_id == tid_uuid)
         if not include_archived:
             total_query = total_query.filter(Question.status == 'ACTIVE')
             
