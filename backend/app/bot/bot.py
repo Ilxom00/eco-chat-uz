@@ -27,6 +27,7 @@ async def route_text_message(update: Update, context):
     txt = update.message.text.strip()
     from app.bot import messages
     from app.bot.handlers import start, menu, topic_nav, results, registration
+    from app.bot.api_client import bot_api
 
     if txt in [messages.BTN_TESTS, "📝 Тестлар"]:
         return await topic_nav.show_topics(update, context)
@@ -37,7 +38,23 @@ async def route_text_message(update: Update, context):
     elif txt in [messages.BTN_HELP, "❓ Ёрдам"]:
         return await menu.show_help(update, context)
     else:
-        # If not a menu button, handle as full name registration input
+        # Only route to handle_fullname if the user is NOT already registered.
+        # This prevents registered users from accidentally re-triggering registration.
+        try:
+            user_id = update.effective_user.id
+            emp = await bot_api.get_employee_by_telegram_id(user_id)
+            if emp and emp.get("full_name"):
+                # Already registered — re-show main menu instead of registration
+                from app.bot.keyboards import get_main_menu_keyboard
+                full_name = emp["full_name"]
+                await update.message.reply_text(
+                    f"🌿 Хуш келибсиз! {full_name}\n\nАсосий меню:",
+                    reply_markup=get_main_menu_keyboard(),
+                )
+                return
+        except Exception:
+            pass
+        # New user typing their name during registration
         return await registration.handle_fullname(update, context)
 
 
