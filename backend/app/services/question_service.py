@@ -1,9 +1,12 @@
 import uuid
 import logging
+from datetime import datetime
+import pytz
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import text
+from sqlalchemy import func, text
 from app.models.question import Question, QuestionAnswer
+from app.models.topic import Topic
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +73,44 @@ async def create_question_with_answers(db: AsyncSession, topic_id: str, text_con
             self.id = qid
 
     return QuestionResult(question_id_str)
+
+
+async def update_question_with_answers(db: AsyncSession, question_id: str, text_content: str, answers: list[dict]) -> bool:
+    if len(answers) != 4:
+        raise ValueError("Барча 4 та вариант киритилиши шарт")
+    if sum(1 for a in answers if a.get("is_correct")) != 1:
+        raise ValueError("Аниқ 1 та тўғри жавоб танланиши шарт")
+        
+    qid_str = _force_str(question_id)
+
+    # 1. Update question text
+    await db.execute(
+        text("UPDATE questions SET text = :txt WHERE id = :qid"),
+        {"txt": text_content, "qid": qid_str}
+    )
+
+    # 2. Re-insert 4 answers
+    await db.execute(
+        text("DELETE FROM question_answers WHERE question_id = :qid"),
+        {"qid": qid_str}
+    )
+
+    for i, ans in enumerate(answers):
+        ans_id_str = str(uuid.uuid4())
+        await db.execute(text("""
+            INSERT INTO question_answers (id, question_id, text, is_correct, option_label, sort_order)
+            VALUES (:id, :qid, :txt, :ic, :ol, :so)
+        """), {
+            "id": ans_id_str,
+            "qid": qid_str,
+            "txt": ans["text"],
+            "ic": bool(ans.get("is_correct", False)),
+            "ol": ans.get("option_label", ["A", "B", "C", "D"][i]),
+            "so": i + 1
+        })
+    
+    await db.commit()
+    return True
 
 
 async def delete_question_permanent(db: AsyncSession, question_id: str) -> bool:
