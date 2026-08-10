@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.api.deps import get_current_admin
@@ -13,12 +13,22 @@ async def list_questions(topic_id: str, page: int = 1, page_size: int = 10, incl
 
 @router.post("/topics/{topic_id}/questions")
 async def create_question(topic_id: str, data: dict, db: AsyncSession = Depends(get_db)):
-    q = await question_service.create_question_with_answers(db, topic_id, text=data.get("text"), answers=data.get("answers"))
-    return {"message": "Success", "id": q.id}
+    text = data.get("text")
+    answers = data.get("answers")
+    if not text or not answers:
+        raise HTTPException(status_code=400, detail="Савол матни ва жавоблар зарур")
+    try:
+        q = await question_service.create_question_with_answers(db, topic_id, text=text, answers=answers)
+        return {"message": "Success", "id": str(q.id)}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/topics/{topic_id}/questions/template")
-async def get_template():
-    return {"message": "Template"}
+@router.delete("/questions/{id}")
+async def delete_question(id: str, db: AsyncSession = Depends(get_db)):
+    await question_service.delete_question_permanent(db, id)
+    return {"message": "Question deleted permanently"}
 
 @router.post("/topics/{topic_id}/questions/import")
 async def import_questions(topic_id: str, file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
@@ -28,4 +38,4 @@ async def import_questions(topic_id: str, file: UploadFile = File(...), db: Asyn
 @router.patch("/questions/{id}/archive")
 async def archive_question(id: str, db: AsyncSession = Depends(get_db)):
     q = await question_service.archive_question(db, id)
-    return {"message": "Archived", "id": q.id}
+    return {"message": "Archived", "id": str(q.id)}
