@@ -135,9 +135,11 @@ const Dashboard = {
 
             if (!data || !data.items || data.items.length === 0) {
                 this.employeesMap = {};
-                if (thead) thead.innerHTML = this.buildHeader(4);
+                const tc = 4; // fallback topic count for empty state
+                const colspan = 3 + tc * 4 + 3;
+                if (thead) thead.innerHTML = this.buildHeader(tc);
                 if (tbody) tbody.innerHTML = `
-                    <tr><td colspan="21" style="text-align:center;padding:48px;color:#9ca3af;">
+                    <tr><td colspan="${colspan}" style="text-align:center;padding:48px;color:#9ca3af;">
                         <div style="font-size:40px;margin-bottom:12px;">📋</div>
                         <div style="font-size:16px;font-weight:600;">Ходимлар рўйхати бўш</div>
                         <div style="font-size:13px;margin-top:4px;">Бот орқали ходимлар рўйхатдан ўтиши билан бу ерда пайдо бўлади</div>
@@ -152,6 +154,7 @@ const Dashboard = {
             });
 
             const topicCount = data.items[0]?.topics?.length || 4;
+            const dynColspan = 3 + topicCount * 4 + 3;
             if (thead) thead.innerHTML = this.buildHeader(topicCount);
 
             const B = 'border:1px solid #e5e7eb;';
@@ -212,9 +215,11 @@ const Dashboard = {
             this.renderPagination(data.total, page);
 
         } catch (e) {
-            console.error(e);
-            const tbody = document.getElementById('employeesTableBody');
-            if (tbody) tbody.innerHTML = `<tr><td colspan="21" style="text-align:center;padding:24px;color:#dc2626;font-weight:600;">Хатолик: ${e.message}</td></tr>`;
+            console.error('Employees load error:', e);
+            const tc2 = 4;
+            const colspan2 = 3 + tc2 * 4 + 3;
+            const tbody2 = document.getElementById('employeesTableBody');
+            if (tbody2) tbody2.innerHTML = `<tr><td colspan="${colspan2}" style="text-align:center;padding:24px;color:#dc2626;font-weight:600;">Хатолик: ${e.message}</td></tr>`;
         }
     },
 
