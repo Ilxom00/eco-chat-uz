@@ -142,5 +142,42 @@ class BotAPIClient:
             res = await test_engine.get_attempt_results(db, attempt_id)
             return res
 
+    async def get_employee_topic_status(self, telegram_user_id: int, topic_id: str) -> Dict[str, Any]:
+        """Get assignment + attempt status for employee+topic. Used to resume in-progress attempts."""
+        from app.models.attempt import EmployeeTopicAssignment, TestAttempt
+        from sqlalchemy import and_
+        from sqlalchemy.future import select as sa_select
+        async with AsyncSessionLocal() as db:
+            emp = await employee_service.get_employee_by_telegram_id(db, telegram_user_id)
+            if not emp:
+                return {}
+            emp_id = str(emp.id)
+            result = await db.execute(
+                sa_select(EmployeeTopicAssignment).where(
+                    and_(
+                        EmployeeTopicAssignment.employee_id == emp_id,
+                        EmployeeTopicAssignment.topic_id == str(topic_id),
+                    )
+                )
+            )
+            assignment = result.scalar_one_or_none()
+            if not assignment:
+                return {}
+            # Find in-progress attempt
+            in_progress_id = None
+            for aid in [assignment.attempt1_id, assignment.attempt2_id]:
+                if aid:
+                    a_res = await db.execute(sa_select(TestAttempt).where(TestAttempt.id == str(aid)))
+                    a = a_res.scalar_one_or_none()
+                    if a and a.status == "IN_PROGRESS":
+                        in_progress_id = str(aid)
+                        break
+            return {
+                "attempt1_id": str(assignment.attempt1_id) if assignment.attempt1_id else None,
+                "attempt2_id": str(assignment.attempt2_id) if assignment.attempt2_id else None,
+                "in_progress_attempt_id": in_progress_id,
+                "status": assignment.status,
+            }
+
 
 bot_api = BotAPIClient()
