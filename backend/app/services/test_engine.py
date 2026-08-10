@@ -767,6 +767,34 @@ async def submit_answer(
             next_aq.question_deadline_at = now + timedelta(
                 seconds=settings.question_timer_seconds
             )
+            # Build next question data for bot
+            safe_answers = [
+                {
+                    "id": a["id"],
+                    "display_label": a["display_label"],
+                    "text": a["text"],
+                }
+                for a in next_aq.answer_display_order
+            ]
+            next_question_data = {
+                "attempt_id": attempt_id,
+                "display_order": next_aq.display_order,
+                "current_index": next_aq.display_order,
+                "question_text": None,  # will be fetched below
+                "answers": safe_answers,
+                "remaining_seconds": settings.question_timer_seconds,
+                "attempt_question_id": str(next_aq.id),
+            }
+            # Fetch question text from snapshot
+            etq_next = (
+                await db.execute(
+                    select(EmployeeTopicQuestion).where(
+                        EmployeeTopicQuestion.id == next_aq.assignment_question_id
+                    )
+                )
+            ).scalar_one_or_none()
+            if etq_next:
+                next_question_data["question_text"] = etq_next.question_text_snapshot
     else:
         # All 15 questions answered
         await _complete_attempt(db, attempt)
