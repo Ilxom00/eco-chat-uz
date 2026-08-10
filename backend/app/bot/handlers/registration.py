@@ -5,11 +5,14 @@ Registration flow:
   ASK_FULLNAME (0) → user enters full name (Cyrillic)
   ASK_PHONE (2) → user shares phone → registers
 """
+import logging
 from telegram import Update
 from telegram.ext import ContextTypes
 from .. import messages
 from ..keyboards import get_phone_keyboard, get_main_menu_keyboard
 from ..api_client import bot_api
+
+logger = logging.getLogger(__name__)
 
 ASK_FULLNAME = 0
 ASK_BRANCH   = 1
@@ -46,8 +49,9 @@ async def handle_branch(update: Update, context: ContextTypes.DEFAULT_TYPE):
         found_fb = next((b for b in FALLBACK_BRANCHES if b["id"] == branch_id), None)
         if found_fb:
             branch_name = found_fb["name"]
-            context.user_data["branch_name"] = branch_name
-            context.user_data["branch_id"] = None  # backend will match by branch_name if needed or keep None
+            context.user_data["branch_id"] = None
+        else:
+            branch_name = branch_id
 
     context.user_data["branch_name"] = branch_name
 
@@ -94,6 +98,7 @@ async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
             telegram_user_id=update.effective_user.id,
             full_name=context.user_data.get("full_name", ""),
             branch_id=context.user_data.get("branch_id"),
+            branch_name=context.user_data.get("branch_name"),
             phone=phone,
         )
 
@@ -107,6 +112,7 @@ async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return MAIN_MENU
 
     except Exception as e:
+        logger.error("Error registering employee for user %d: %s", update.effective_user.id, e, exc_info=True)
         await update.message.reply_text(messages.ERROR_NETWORK)
         return ASK_PHONE
 
