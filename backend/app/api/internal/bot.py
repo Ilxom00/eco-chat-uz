@@ -56,4 +56,9 @@ async def confirm_seminar(attempt_id: str, db: AsyncSession = Depends(get_db)):
 @router.get("/branches")
 async def get_branches(db: AsyncSession = Depends(get_db)):
     branches = await branch_service.get_all_branches(db, False)
-    return {"branches": branches}
+    return {
+        "branches": [
+            {"id": str(b.id), "name": b.name, "sort_order": b.sort_order}
+            for b in branches
+        ]
+    }
