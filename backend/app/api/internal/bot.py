@@ -11,11 +11,17 @@ router = APIRouter(prefix="/bot", tags=["internal"], dependencies=[Depends(get_i
 @router.post("/register")
 async def register(data: dict, db: AsyncSession = Depends(get_db)):
     emp, is_new = await employee_service.get_or_create_employee(db, data.get("telegram_user_id"))
+    
+    # Safely resolve real UUID for branch_id
+    raw_bid = data.get("branch_id")
+    raw_bname = data.get("branch_name")
+    resolved_bid = await branch_service.resolve_branch_id(db, branch_id=raw_bid, branch_name=raw_bname)
+
     emp = await employee_service.update_registration(
         db, 
         data.get("telegram_user_id"), 
         data.get("full_name"), 
-        str(data.get("branch_id")) if data.get("branch_id") else None, 
+        resolved_bid, 
         data.get("phone")
     )
     return {"employee_id": str(emp.id), "success": True}
