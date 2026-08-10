@@ -23,3 +23,13 @@ async def get_dashboard_employee_detail(id: str, db: AsyncSession = Depends(get_
 async def get_dashboard_attempt_detail(attempt_id: str, db: AsyncSession = Depends(get_db)):
     return await result_service.get_attempt_detail_for_dashboard(db, attempt_id)
 
+@router.api_route("/system-update", methods=["GET", "POST"])
+async def trigger_system_update():
+    import subprocess
+    try:
+        res = subprocess.run(["git", "pull", "origin", "main"], capture_output=True, text=True, timeout=20)
+        return {"success": True, "output": res.stdout, "error": res.stderr}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
