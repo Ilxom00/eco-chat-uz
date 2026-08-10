@@ -8,11 +8,12 @@ from app.seeds.seed import seed_topics_and_questions
 router = APIRouter(tags=["topics"], dependencies=[Depends(get_current_admin)])
 
 @router.get("")
+@router.get("/")
 async def list_topics(db: AsyncSession = Depends(get_db)):
     topics = await topic_service.get_active_topics_ordered(db)
     
-    # Auto-seed if empty
-    if not topics:
+    # Auto-seed 4 topics and 114 questions if topics list is empty or fewer than 4
+    if not topics or len(topics) < 4:
         await seed_topics_and_questions(engine, force=True)
         topics = await topic_service.get_active_topics_ordered(db)
 
@@ -34,10 +35,22 @@ async def reseed_topics():
     res = await seed_topics_and_questions(engine, force=True)
     return {"success": True, "message": "114 ta savol qayta юкланди"}
 
+@router.post("")
 @router.post("/")
 async def create_topic(data: dict, db: AsyncSession = Depends(get_db)):
-    topic = await topic_service.create_topic(db, short_name=data.get("short_name"), full_name=data.get("full_name"))
-    return {"id": str(topic.id), "short_name": topic.short_name, "full_name": topic.full_name, "q_count": 0}
+    short_name = data.get("short_name")
+    full_name = data.get("full_name")
+    if not short_name or not full_name:
+        raise HTTPException(status_code=400, detail="Qisqa ва тўлиқ номлари шарт")
+    
+    topic = await topic_service.create_topic(db, short_name=short_name, full_name=full_name)
+    return {
+        "id": str(topic.id),
+        "short_name": topic.short_name,
+        "full_name": topic.full_name,
+        "q_count": 0,
+        "is_active": topic.is_active
+    }
 
 @router.delete("/{id}")
 async def delete_topic(id: str, db: AsyncSession = Depends(get_db)):
