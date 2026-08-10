@@ -18,6 +18,24 @@ async def debug_admin(db: AsyncSession = Depends(get_db)):
     except Exception as e:
         return {"error": str(e)}
 
+@router.get("/debug-create")
+async def debug_create(db: AsyncSession = Depends(get_db)):
+    """TEMPORARY: force-create admin"""
+    try:
+        import uuid as _u, bcrypt as _b
+        row = (await db.execute(text("SELECT id FROM admins WHERE username='user'"))).fetchone()
+        if row:
+            return {"status": "already_exists"}
+        _hash = _b.hashpw(b"12345", _b.gensalt()).decode()
+        await db.execute(
+            text("INSERT INTO admins (id, username, password_hash, full_name, is_active) VALUES (:id, 'user', :pw, 'Admin', 1)"),
+            {"id": str(_u.uuid4()), "pw": _hash}
+        )
+        await db.commit()
+        return {"status": "created_ok"}
+    except Exception as e:
+        return {"error": str(e), "type": type(e).__name__}
+
 @router.post("/login")
 async def login(response: Response, data: dict, db: AsyncSession = Depends(get_db)):
     admin = await authenticate_admin(db, data.get("username"), data.get("password"))
