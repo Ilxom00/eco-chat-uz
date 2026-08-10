@@ -14,3 +14,8 @@ async def list_employees(page: int = 1, page_size: int = 10, db: AsyncSession = 
 @router.get("/{id}")
 async def get_employee(id: str, db: AsyncSession = Depends(get_db)):
     return await employee_service.get_employee_full_detail(db, id)
+
+@router.delete("/{id}")
+async def delete_employee(id: str, db: AsyncSession = Depends(get_db)):
+    await employee_service.delete_employee_cascade(db, id)
+    return {"message": "Xodim va barcha bog'liq ma'lumotlar o'chirildi"}
