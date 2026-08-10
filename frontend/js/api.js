@@ -20,7 +20,8 @@ const API = {
             
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                throw new Error(err.message || `HTTP error ${response.status}`);
+                const msg = err.detail || err.message || `HTTP error ${response.status}`;
+                throw new Error(msg);
             }
             
             // Handle blob (for files)
