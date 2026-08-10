@@ -17,15 +17,12 @@
             <div class="sidebar-header">
                 <img src="assets/logo_tree.jpg" alt="Logo" class="sidebar-logo">
 
-                <span class="sidebar-brand">eco-chat.uz</span>
+                <span class="sidebar-brand">@Eco234_bot</span>
             </div>
             <nav class="sidebar-nav">
                 <a href="#dashboard" class="nav-item active" data-target="dashboard">📊 Умумий</a>
                 <a href="#topics" class="nav-item" data-target="topics">📝 Тест Киритиш</a>
-                <a href="#reports" class="nav-item" data-target="reports">📈 Ҳисоботлар</a>
                 <a href="#branches" class="nav-item" data-target="branches">🏢 Филиаллар</a>
-                <a href="#audit" class="nav-item" data-target="audit">📋 Audit Log</a>
-                <a href="#settings" class="nav-item" data-target="settings">⚙️ Созламалар</a>
             </nav>
             <div class="sidebar-footer">
                 <div class="admin-info">
@@ -49,8 +46,8 @@
             <!-- Dashboard Section -->
             <section id="dashboard" class="page-section active">
 
-                <!-- Row 1: Main counters -->
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px;">
+                <!-- Row 1: Main counters (2 cards) -->
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:16px;">
                     <div class="kpi-card" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border:none;">
                         <div class="kpi-icon" style="background:rgba(255,255,255,0.2);color:#fff;">👥</div>
                         <div class="kpi-info">
@@ -63,13 +60,6 @@
                         <div class="kpi-info">
                             <h3 style="color:rgba(255,255,255,0.8);font-size:13px;">Тестни тугатганлар</h3>
                             <div class="kpi-value" id="kpi-completed" style="color:#fff;font-size:32px;">0</div>
-                        </div>
-                    </div>
-                    <div class="kpi-card" style="background:linear-gradient(135deg,#92400e,#d97706);color:#fff;border:none;">
-                        <div class="kpi-icon" style="background:rgba(255,255,255,0.2);color:#fff;">🔄</div>
-                        <div class="kpi-info">
-                            <h3 style="color:rgba(255,255,255,0.8);font-size:13px;">Ҳозир тест ечаётганлар</h3>
-                            <div class="kpi-value" id="kpi-active" style="color:#fff;font-size:32px;">0</div>
                         </div>
                     </div>
                 </div>
