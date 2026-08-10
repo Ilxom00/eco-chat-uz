@@ -169,7 +169,7 @@ async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: in
                 attempts = await db.execute(text("""
                     SELECT id, attempt_number, score, status
                     FROM test_attempts
-                    WHERE employee_id = :eid AND topic_id = :tid
+                    WHERE CAST(employee_id AS text) = :eid AND CAST(topic_id AS text) = :tid
                     ORDER BY attempt_number
                 """), {"eid": emp_id, "tid": topic_id})
                 att_rows = attempts.fetchall()
@@ -177,8 +177,8 @@ async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: in
                 att1 = next((r for r in att_rows if r[1] == 1), None)
                 att2 = next((r for r in att_rows if r[1] == 2), None)
 
-                att1_id = str(att1[0]) if att1 else None
-                att2_id = str(att2[0]) if att2 else None
+                att1_id = str(att1[0]) if (att1 and att1[0]) else None
+                att2_id = str(att2[0]) if (att2 and att2[0]) else None
 
                 s1_raw = att1[2] if att1 else None
                 s2_raw = att2[2] if att2 else None
@@ -245,19 +245,21 @@ async def get_attempt_detail_for_dashboard(db: AsyncSession, attempt_id: str) ->
     """
     import json
     try:
+        aid_str = str(attempt_id).strip()
         attempt_res = await db.execute(text("""
             SELECT ta.id, ta.employee_id, ta.topic_id, ta.attempt_number, ta.score, ta.status, 
                    ta.started_at, ta.completed_at,
                    e.full_name, COALESCE(b.name, '—') as branch_name,
                    t.short_name, t.full_name as topic_full_name
             FROM test_attempts ta
-            JOIN employees e ON ta.employee_id = e.id
-            LEFT JOIN branches b ON e.branch_id = b.id
-            JOIN topics t ON ta.topic_id = t.id
-            WHERE ta.id = :aid
-        """), {"aid": attempt_id})
+            JOIN employees e ON CAST(ta.employee_id AS text) = CAST(e.id AS text)
+            LEFT JOIN branches b ON CAST(e.branch_id AS text) = CAST(b.id AS text)
+            JOIN topics t ON CAST(ta.topic_id AS text) = CAST(t.id AS text)
+            WHERE CAST(ta.id AS text) = :aid
+        """), {"aid": aid_str})
         att = attempt_res.fetchone()
         if not att:
+            logger.warning("Attempt %s not found in test_attempts table", aid_str)
             return {}
 
         # Calculate duration
@@ -273,16 +275,18 @@ async def get_attempt_detail_for_dashboard(db: AsyncSession, attempt_id: str) ->
             else:
                 duration_str = f"{rem_secs} сония"
 
-        # Get attempt questions ordered by display_order
+        # Get attempt questions ordered by display_order (LEFT JOINs to ensure non-empty results)
         aq_res = await db.execute(text("""
             SELECT aq.display_order, aq.answer_display_order, aq.selected_answer_id, 
                    aq.is_correct, aq.response_time_ms, aq.answer_status,
-                   etq.question_text_snapshot, etq.answers_snapshot, etq.correct_answer_id
+                   COALESCE(etq.question_text_snapshot, qst.text, '—') as q_text,
+                   etq.answers_snapshot, etq.correct_answer_id
             FROM attempt_questions aq
-            JOIN employee_topic_questions etq ON aq.assignment_question_id = etq.id
-            WHERE aq.attempt_id = :aid
+            LEFT JOIN employee_topic_questions etq ON CAST(aq.assignment_question_id AS text) = CAST(etq.id AS text)
+            LEFT JOIN questions qst ON CAST(aq.question_id AS text) = CAST(qst.id AS text)
+            WHERE CAST(aq.attempt_id AS text) = :aid
             ORDER BY aq.display_order ASC
-        """), {"aid": attempt_id})
+        """), {"aid": aid_str})
         aq_rows = aq_res.fetchall()
 
         questions = []
@@ -295,7 +299,7 @@ async def get_attempt_detail_for_dashboard(db: AsyncSession, attempt_id: str) ->
                 except Exception:
                     answer_disp = []
 
-            sel_ans_id = r[2]
+            sel_ans_id = str(r[2]) if r[2] else None
             is_corr = r[3]
             resp_ms = r[4]
             ans_status = r[5]
@@ -307,7 +311,7 @@ async def get_attempt_detail_for_dashboard(db: AsyncSession, attempt_id: str) ->
                 except Exception:
                     answers_snap = []
 
-            correct_ans_id = r[8]
+            correct_ans_id = str(r[8]) if r[8] else None
 
             resp_sec = round(resp_ms / 1000) if resp_ms else 0
 
@@ -316,16 +320,19 @@ async def get_attempt_detail_for_dashboard(db: AsyncSession, attempt_id: str) ->
             source_answers = answer_disp if answer_disp else answers_snap
             labels = ['А', 'Б', 'В', 'Г']
             for idx, ans in enumerate(source_answers):
-                ans_id = ans.get("id")
+                ans_id = str(ans.get("id")) if ans.get("id") else ""
                 lbl = ans.get("display_label") or ans.get("label") or (labels[idx] if idx < len(labels) else str(idx+1))
                 txt = ans.get("text") or ""
                 
+                is_opt_correct = bool(ans.get("is_correct")) or (bool(ans_id) and bool(correct_ans_id) and ans_id == correct_ans_id)
+                is_opt_selected = bool(ans_id) and bool(sel_ans_id) and ans_id == sel_ans_id
+
                 options.append({
                     "id": ans_id,
                     "label": lbl,
                     "text": txt,
-                    "is_selected": (ans_id == sel_ans_id),
-                    "is_correct": (ans_id == correct_ans_id),
+                    "is_selected": is_opt_selected,
+                    "is_correct": is_opt_correct,
                 })
 
             questions.append({
@@ -355,6 +362,7 @@ async def get_attempt_detail_for_dashboard(db: AsyncSession, attempt_id: str) ->
     except Exception as e:
         logger.error("Error fetching attempt detail for %s: %s", attempt_id, e, exc_info=True)
         return {}
+
 
 
 
