@@ -100,8 +100,7 @@ async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: in
     Returns employees with per-topic test scores for the rating table.
     """
     try:
-        search = (filters.get("search") or "").strip()
-        where_clause = "WHERE (e.registration_state = 'REGISTERED' OR (e.full_name IS NOT NULL AND e.full_name != 'Unknown'))"
+        where_clause = "WHERE 1=1"
         params = {"limit": page_size, "offset": (page - 1) * page_size}
 
         if search:
