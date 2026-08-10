@@ -1,19 +1,19 @@
 """
 test_flow.py — Telegram Bot Test Flow Handler
-FIXED:
-  - asyncio.Task properly stored and cancelled to prevent repeated questions
-  - 60s timer per question
-  - Correct answer detection fixed (uses ans index, not answer_id mismatch)
-  - Long button text wrapping via keyboards.py
-  - Fireworks 🎉 on correct answer (1.5s)
-  - Auto-advance on timeout
+FIXES:
+  - Answer text in MESSAGE BODY (full text, no truncation)
+  - Buttons: [А][Б] / [В][Г] short labels only
+  - asyncio.Task cancellation prevents repeated question display
+  - Idempotent double-tap detection
+  - 60s timer, auto-advance on timeout
+  - 🎉 fireworks on correct (1.5s), ❌ on wrong (1s)
 """
 import logging
 import asyncio
 import time
 from telegram import Update
 from telegram.ext import ContextTypes
-from ..keyboards import get_answer_keyboard
+from ..keyboards import get_answer_keyboard, format_answers_text
 from ..api_client import bot_api
 
 logger = logging.getLogger(__name__)
@@ -22,15 +22,36 @@ TOPIC_SELECT = 20
 TEST_IN_PROGRESS = 22
 SEMINAR_CONFIRM = 23
 
-QUESTION_TIMER = 60   # 60 seconds per question
+QUESTION_TIMER = 60  # seconds
 
 
-# ─── Cancel helper ─────────────────────────────────────────────────────────────
+# ─── Cancel countdown helper ───────────────────────────────────────────────────
 def _cancel_countdown(context: ContextTypes.DEFAULT_TYPE):
-    """Cancel the current countdown task if running."""
     task = context.user_data.pop("countdown_task", None)
     if task and not task.done():
         task.cancel()
+
+
+# ─── Build question message text ──────────────────────────────────────────────
+def _build_msg(qdata: dict, remaining: int) -> str:
+    current = qdata.get("current_index", qdata.get("display_order", 1))
+    total = 15
+    q_text = qdata.get("question_text", "")
+    answers = qdata.get("answers", [])
+    answers_text = format_answers_text(answers)
+
+    total_blocks = 12
+    filled = min(total_blocks, remaining // 5)
+    empty = total_blocks - filled
+    bar = "🟩" * filled + "⬜" * empty
+
+    return (
+        f"📝 <b>Савол {current} / {total}:</b>\n\n"
+        f"{q_text}\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"{answers_text}\n\n"
+        f"⏱ <i>Вақт: {remaining} сония</i>  {bar}"
+    )
 
 
 # ─── Countdown background task ────────────────────────────────────────────────
@@ -38,64 +59,46 @@ async def _run_countdown(
     context: ContextTypes.DEFAULT_TYPE,
     chat_id: int,
     msg_id: int,
-    q_text: str,
-    answers: list,
-    current: int,
-    total: int,
+    qdata: dict,
     attempt_id: str,
     display_order: int,
     aq_id: str,
     deadline_unix: float,
 ):
-    """
-    Background countdown: edits message every 5s. Auto-advances on timeout.
-    Uses asyncio.Task cancellation for clean stop when user answers.
-    """
     try:
         update_interval = 5
+        current = qdata.get("current_index", 1)
+        total = 15
 
         while True:
             await asyncio.sleep(update_interval)
             remaining = max(0, int(deadline_unix - time.time()))
 
-            # Build progress bar (12 blocks for 60s, each = 5s)
-            total_blocks = 12
-            filled = min(total_blocks, remaining // 5)
-            empty = total_blocks - filled
-            bar = "🟩" * filled + "⬜" * empty
-
-            text = (
-                f"📝 <b>Савол {current} / {total}:</b>\n\n"
-                f"<b>{q_text}</b>\n\n"
-                f"⏱ <i>Вақт: {remaining} сония</i>\n"
-                f"{bar}"
-            )
-
             try:
                 await context.bot.edit_message_text(
                     chat_id=chat_id,
                     message_id=msg_id,
-                    text=text,
-                    reply_markup=get_answer_keyboard(answers),
+                    text=_build_msg(qdata, remaining),
+                    reply_markup=get_answer_keyboard(qdata.get("answers", [])),
                     parse_mode="HTML",
                 )
             except asyncio.CancelledError:
                 raise
             except Exception:
-                pass
+                pass  # Already edited or deleted
 
             if remaining <= 0:
                 break
 
-        # Timer expired — show timeout message
+        # Timeout: show expired message
         try:
             await context.bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=msg_id,
                 text=(
                     f"📝 <b>Савол {current} / {total}:</b>\n\n"
-                    f"<b>{q_text}</b>\n\n"
-                    f"⌛ <i>Вақт тугади!</i>"
+                    f"{qdata.get('question_text', '')}\n\n"
+                    f"⌛ <b>Вақт тугади!</b>"
                 ),
                 parse_mode="HTML",
             )
@@ -104,66 +107,41 @@ async def _run_countdown(
 
         await asyncio.sleep(1.5)
 
-        # Call server timeout handler
-        try:
-            res = await bot_api.handle_timeout(aq_id)
+        # Auto-advance via server timeout handler
+        res = await bot_api.handle_timeout(aq_id)
 
-            if res.get("attempt_completed"):
-                score = res.get("score_so_far", 0)
-                pct = round(score / 15 * 100)
-                icon = "🎉" if pct >= 70 else "📊"
-                await context.bot.send_message(
+        if res.get("attempt_completed"):
+            score = res.get("score_so_far", 0)
+            pct = round(score / 15 * 100)
+            icon = "🎉" if pct >= 70 else "📊"
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=f"{icon} <b>Тест якунланди!</b>\n\n"
+                     f"👤 <b>Натижангиз:</b> {score} / 15 ({pct}%)\n\n"
+                     f"Маълумотлар сақланди.",
+                parse_mode="HTML",
+            )
+        else:
+            next_q = res.get("next_question")
+            if next_q and next_q.get("question_text"):
+                new_dl = time.time() + QUESTION_TIMER
+                new_msg = await context.bot.send_message(
                     chat_id=chat_id,
-                    text=f"{icon} <b>Тест якунланди!</b>\n\n"
-                         f"👤 <b>Натижангиз:</b> {score} / 15 ({pct}%)\n\n"
-                         f"Маълумотлар сақланди.",
+                    text=_build_msg(next_q, QUESTION_TIMER),
+                    reply_markup=get_answer_keyboard(next_q.get("answers", [])),
                     parse_mode="HTML",
                 )
-            else:
-                next_q = res.get("next_question")
-                if next_q and next_q.get("question_text"):
-                    new_dl = time.time() + QUESTION_TIMER
-                    new_msg = await context.bot.send_message(
-                        chat_id=chat_id,
-                        text=_q_text(next_q, QUESTION_TIMER),
-                        reply_markup=get_answer_keyboard(next_q.get("answers", [])),
-                        parse_mode="HTML",
-                    )
-                    dorder = next_q.get("display_order", current + 1)
-                    aq_next = next_q.get("attempt_question_id", "")
-                    task = asyncio.create_task(_run_countdown(
-                        context, chat_id, new_msg.message_id,
-                        next_q["question_text"], next_q.get("answers", []),
-                        next_q.get("current_index", current + 1), total,
-                        attempt_id, dorder, aq_next, new_dl,
-                    ))
-                    context.user_data["countdown_task"] = task
-                    context.user_data["current_msg_id"] = new_msg.message_id
-                    context.user_data[f"aqid_{dorder}"] = aq_next
-        except asyncio.CancelledError:
-            raise
-        except Exception as e:
-            logger.error("Auto-timeout advance error: %s", e)
+                dorder = next_q.get("display_order", display_order + 1)
+                aq_next = next_q.get("attempt_question_id", "")
+                context.user_data["current_msg_id"] = new_msg.message_id
+                task = asyncio.create_task(_run_countdown(
+                    context, chat_id, new_msg.message_id,
+                    next_q, attempt_id, dorder, aq_next, new_dl,
+                ))
+                context.user_data["countdown_task"] = task
 
     except asyncio.CancelledError:
-        pass  # Task was cancelled (user answered) — clean exit
-
-
-# ─── Text builder helper ───────────────────────────────────────────────────────
-def _q_text(qdata: dict, remaining: int) -> str:
-    current = qdata.get("current_index", qdata.get("display_order", 1))
-    total = 15
-    q_text = qdata.get("question_text", "")
-    total_blocks = 12
-    filled = min(total_blocks, remaining // 5)
-    empty = total_blocks - filled
-    bar = "🟩" * filled + "⬜" * empty
-    return (
-        f"📝 <b>Савол {current} / {total}:</b>\n\n"
-        f"<b>{q_text}</b>\n\n"
-        f"⏱ <i>Вақт: {remaining} сония</i>\n"
-        f"{bar}"
-    )
+        pass  # User answered — clean exit
 
 
 # ─── Show Question ─────────────────────────────────────────────────────────────
@@ -176,18 +154,15 @@ async def show_question(
     if not question_data or not question_data.get("question_text"):
         return await show_attempt_results(update, context, {})
 
-    # Cancel previous countdown before showing new question
+    # Cancel previous countdown FIRST
     _cancel_countdown(context)
 
-    current = question_data.get("current_index", question_data.get("display_order", 1))
-    q_text = question_data.get("question_text", "")
-    answers = question_data.get("answers", [])
-    display_order = question_data.get("display_order", current)
     aq_id = question_data.get("attempt_question_id", "")
+    display_order = question_data.get("display_order", 1)
 
     deadline_unix = time.time() + QUESTION_TIMER
-    text = _q_text(question_data, QUESTION_TIMER)
-    keyboard = get_answer_keyboard(answers)
+    text = _build_msg(question_data, QUESTION_TIMER)
+    keyboard = get_answer_keyboard(question_data.get("answers", []))
 
     chat_id = update.effective_chat.id
     if update.callback_query:
@@ -205,15 +180,12 @@ async def show_question(
         )
 
     context.user_data["current_msg_id"] = msg.message_id
-    if aq_id:
-        context.user_data[f"aqid_{display_order}"] = aq_id
 
-    # Start new countdown task
+    # Start countdown task
     if attempt_id and aq_id:
         task = asyncio.create_task(_run_countdown(
             context, chat_id, msg.message_id,
-            q_text, answers, current, 15,
-            attempt_id, display_order, aq_id, deadline_unix,
+            question_data, attempt_id, display_order, aq_id, deadline_unix,
         ))
         context.user_data["countdown_task"] = task
 
@@ -228,19 +200,18 @@ async def start_test(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
     if not topic_id:
-        msg_text = "⚠️ Илтимос, аввал мавзуни танланг."
+        txt = "⚠️ Илтимос, аввал мавзуни танланг."
         if query:
-            await query.edit_message_text(msg_text)
+            await query.edit_message_text(txt)
         else:
-            await update.message.reply_text(msg_text)
+            await update.message.reply_text(txt)
         return TOPIC_SELECT
 
     try:
         attempt_data = await bot_api.start_attempt(user_id, topic_id, 1)
-        err_msg = attempt_data.get("error", "")
+        err_msg = str(attempt_data.get("error", ""))
 
-        # Attempt already exists — try to resume
-        if "already exists" in str(err_msg).lower():
+        if "already exists" in err_msg.lower():
             try:
                 resume_data = await bot_api.get_employee_topic_status(user_id, topic_id)
                 eid = resume_data.get("in_progress_attempt_id") or resume_data.get("attempt1_id")
@@ -251,15 +222,15 @@ async def start_test(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     if qdata and qdata.get("question_text"):
                         await show_question(update, context, qdata, eid)
                         return TEST_IN_PROGRESS
-                    else:
-                        results = await bot_api.get_attempt_results(eid)
-                        return await show_attempt_results(update, context, results)
+                    results = await bot_api.get_attempt_results(eid)
+                    return await show_attempt_results(update, context, results)
             except Exception as e2:
                 logger.warning("Resume error: %s", e2)
+            txt = "⚠️ Тест аллақачон бошланган."
             if query:
-                await query.edit_message_text("⚠️ Тест аллақачон бошланган.")
+                await query.edit_message_text(txt)
             else:
-                await update.message.reply_text("⚠️ Тест аллақачон бошланган.")
+                await update.message.reply_text(txt)
             return TOPIC_SELECT
 
         if "error" in attempt_data or not attempt_data.get("attempt_id"):
@@ -285,11 +256,11 @@ async def start_test(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         logger.error("start_test error: %s", e, exc_info=True)
-        err_text = "⚠️ Тестни бошлашда хатолик юз берди."
+        txt = "⚠️ Тестни бошлашда хатолик юз берди."
         if query:
-            await query.edit_message_text(err_text)
+            await query.edit_message_text(txt)
         else:
-            await update.message.reply_text(err_text)
+            await update.message.reply_text(txt)
         return TOPIC_SELECT
 
 
@@ -311,20 +282,26 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     answer_id = parts[2]
     attempt_id = context.user_data.get("attempt_id")
 
-    # CRITICAL: Cancel countdown immediately to prevent double-advance
+    # CRITICAL: Cancel countdown IMMEDIATELY before anything else
     _cancel_countdown(context)
 
     try:
         result = await bot_api.submit_answer(attempt_id, order, answer_id)
+
+        # IDEMPOTENT: double-tap or already answered → ignore silently
+        if result.get("idempotent_response"):
+            logger.debug("Idempotent answer for order=%s, ignoring", order)
+            return TEST_IN_PROGRESS
+
         is_correct = result.get("is_correct", False)
         attempt_completed = result.get("attempt_completed", False)
 
-        # Feedback: correct or wrong (brief, non-blocking)
+        # Brief feedback
         if is_correct:
             try:
                 await query.edit_message_text(
                     "✅ <b>Тўғри жавоб!</b> 🎉🎉🎉\n\n⏳ Кейинги савол...",
-                    parse_mode="HTML"
+                    parse_mode="HTML",
                 )
                 await asyncio.sleep(1.5)
             except Exception:
@@ -333,7 +310,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 await query.edit_message_text(
                     "❌ <b>Нотўғри жавоб.</b>\n\n⏳ Кейинги савол...",
-                    parse_mode="HTML"
+                    parse_mode="HTML",
                 )
                 await asyncio.sleep(1.0)
             except Exception:
@@ -342,12 +319,11 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if attempt_completed:
             return await show_attempt_results(update, context, result)
 
-        # Show next question
         next_q = result.get("next_question")
         if next_q and next_q.get("question_text"):
             await show_question(update, context, next_q, attempt_id)
         else:
-            # Fallback: fetch from server
+            # Fallback: get from server
             try:
                 res = await bot_api.get_current_question(attempt_id)
                 next_q2 = res.get("question")
@@ -371,7 +347,6 @@ async def show_attempt_results(
     context: ContextTypes.DEFAULT_TYPE,
     results: dict,
 ):
-    # Cancel any running countdown
     _cancel_countdown(context)
 
     attempt_id = context.user_data.get("attempt_id")
