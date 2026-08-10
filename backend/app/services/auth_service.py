@@ -49,7 +49,7 @@ async def authenticate_admin(db: AsyncSession, username: str, password: str) -> 
             if p in ["12345", "admin123"] and not verify_password(p, db_hash):
                 new_hash = get_password_hash(p)
                 await db.execute(
-                    text("UPDATE admins SET password_hash = :pw, is_active = 1 WHERE id = :id"),
+                    text("UPDATE admins SET password_hash = :pw, is_active = TRUE WHERE id = :id"),
                     {"pw": new_hash, "id": admin_id}
                 )
                 await db.commit()
@@ -76,12 +76,13 @@ async def get_current_admin(db: AsyncSession, token: str) -> Admin | None:
     if not username:
         return None
     row = (await db.execute(
-        text("SELECT id, username, password_hash, full_name, is_active FROM admins WHERE LOWER(username) = LOWER(:u) AND is_active = 1"),
+        text("SELECT id, username, password_hash, full_name, is_active FROM admins WHERE LOWER(username) = LOWER(:u) AND is_active = TRUE"),
         {"u": username}
     )).fetchone()
     if not row:
         return None
     return Admin(id=str(row[0]), username=row[1], password_hash=row[2], full_name=row[3], is_active=True)
+
 
 
 async def create_access_token_for_admin(admin_id: str, username: str) -> str:
