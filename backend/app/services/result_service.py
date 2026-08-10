@@ -31,12 +31,13 @@ async def get_dashboard_stats(db: AsyncSession) -> dict:
             WHERE ta.status = 'COMPLETED'
         """))).scalar() or 0
 
-        # Currently active = IN_PROGRESS AND started within last 3 hours AND employee exists
+        # Currently active = IN_PROGRESS AND started within last 30 min AND employee exists
+        # Max test time: 15 questions × 30 sec = 7.5 min → 30 min window is safe
         active = (await db.execute(text("""
             SELECT COUNT(DISTINCT ta.id) FROM test_attempts ta
             JOIN employees e ON ta.employee_id = e.id
             WHERE ta.status = 'IN_PROGRESS'
-            AND ta.started_at > NOW() - INTERVAL '3 hours'
+            AND ta.started_at > NOW() - INTERVAL '30 minutes'
         """))).scalar() or 0
 
         total_tests = (await db.execute(text("""
