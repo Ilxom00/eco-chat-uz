@@ -608,6 +608,12 @@ async def get_current_question_full(
         for a in aq.answer_display_order
     ]
 
+    # Query topic details for display headers in bot
+    topic = (
+        await db.execute(select(Topic).where(Topic.id == attempt.topic_id))
+    ).scalar_one_or_none()
+    topic_name = f"{topic.short_name} — {topic.full_name}" if topic else "Мавзу"
+
     return {
         "attempt_question_id": str(aq.id),
         "display_order": aq.display_order,
@@ -619,6 +625,8 @@ async def get_current_question_full(
         "remaining_seconds": remaining_seconds,
         "answer_status": aq.answer_status,
         "attempt_id": str(attempt_id),
+        "attempt_number": attempt.attempt_number,
+        "topic_name": topic_name,
     }
 
 
