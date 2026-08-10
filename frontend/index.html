@@ -114,23 +114,16 @@
                             <input type="text" class="form-control input-sm" placeholder="Қидириш..." id="empSearch">
                         </div>
                     </div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>№</th>
-                                <th>Ф.И.Ш.</th>
-                                <th>Филиал</th>
-                                <th>Мавзу</th>
-                                <th>1-уриниш</th>
-                                <th>2-уриниш</th>
-                                <th>Фарқ</th>
-                                <th>Ҳолат</th>
-                            </tr>
+                    <div style="overflow-x:auto;">
+                    <table class="data-table" id="ratingTable" style="min-width:1400px; border-collapse:collapse; font-size:13px;">
+                        <thead id="ratingTableHead">
+                            <!-- Filled dynamically by JS based on topic count -->
                         </thead>
                         <tbody id="employeesTableBody">
-                            <!-- Rows via JS -->
+                            <tr><td colspan="20" style="text-align:center;padding:20px;color:var(--text-secondary)">Yuklanmoqda...</td></tr>
                         </tbody>
                     </table>
+                    </div>
                     <div class="pagination" id="empPagination"></div>
                 </div>
             </section>
