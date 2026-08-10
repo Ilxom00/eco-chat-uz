@@ -39,27 +39,31 @@ async def register_employee(
 ) -> Employee:
     """
     Registers or updates an employee in the database.
-    Uses ORM queries exclusively — no raw SQL with string UUIDs.
+    Works with BOTH SQLite (String(36) UUID) and PostgreSQL (UUID native).
     """
+    import os as _os
+    _use_sqlite = _os.getenv("DATABASE_URL", "").startswith("sqlite") or not _os.getenv("DATABASE_URL", "")
     tg_id = int(telegram_user_id)
 
     # Resolve branch using ORM-safe method
-    branch_uuid = None
+    branch_val = None
     if branch_name_or_id:
         from app.services.branch_service import resolve_branch_id
         try:
             branch_uuid = await resolve_branch_id(db, branch_name_or_id)
+            # SQLite needs string, PostgreSQL needs UUID object
+            branch_val = str(branch_uuid) if branch_uuid else None
         except Exception as e:
             logger.warning("Could not resolve branch_id for %s: %s", branch_name_or_id, e)
 
     # Fallback: get first active branch via ORM
-    if not branch_uuid:
+    if not branch_val:
         result = await db.execute(
             select(Branch).filter(Branch.is_active == True).order_by(Branch.sort_order).limit(1)
         )
         first_branch = result.scalar_one_or_none()
         if first_branch:
-            branch_uuid = first_branch.id
+            branch_val = str(first_branch.id)
 
     # Check if employee already exists
     emp_res = await db.execute(select(Employee).filter(Employee.telegram_user_id == tg_id))
@@ -67,17 +71,18 @@ async def register_employee(
 
     if emp:
         emp.full_name = full_name
-        if branch_uuid:
-            emp.branch_id = branch_uuid
+        if branch_val:
+            emp.branch_id = branch_val
         emp.phone = phone or emp.phone or ""
         emp.registration_state = "REGISTERED"
         emp.registered_at = datetime.now(timezone.utc)
     else:
+        new_id = str(uuid.uuid4())  # Always string — works for both SQLite and PostgreSQL
         emp = Employee(
-            id=uuid.uuid4(),
+            id=new_id,
             telegram_user_id=tg_id,
             full_name=full_name,
-            branch_id=branch_uuid,
+            branch_id=branch_val,
             phone=phone or "",
             registration_state="REGISTERED",
             registered_at=datetime.now(timezone.utc),
@@ -86,7 +91,7 @@ async def register_employee(
 
     await db.commit()
     await db.refresh(emp)
-    logger.info("Successfully registered employee: %s (TG: %d, branch: %s)", full_name, tg_id, branch_uuid)
+    logger.info("Registered employee: %s (TG: %d, branch: %s)", full_name, tg_id, branch_val)
     return emp
 
 
