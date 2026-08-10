@@ -130,35 +130,36 @@ async def list_employees(db: AsyncSession, filters: dict, page: int, page_size: 
 
 
 async def delete_employee_cascade(db: AsyncSession, employee_id: str) -> bool:
-    """Delete employee and all related data."""
+    """Delete employee and all related data safely without 500 errors."""
     try:
-        eid_uuid = uuid.UUID(str(employee_id).strip())
-        eid = str(eid_uuid)
+        eid_str = str(employee_id).strip()
 
         await db.execute(text("""
             DELETE FROM attempt_questions WHERE attempt_id IN (
-                SELECT id FROM test_attempts WHERE employee_id = :eid
+                SELECT id FROM test_attempts WHERE CAST(employee_id AS text) = :eid
             )
-        """), {"eid": eid_uuid})
+        """), {"eid": eid_str})
 
         await db.execute(text("""
             DELETE FROM employee_topic_questions WHERE assignment_id IN (
-                SELECT id FROM employee_topic_assignments WHERE employee_id = :eid
+                SELECT id FROM employee_topic_assignments WHERE CAST(employee_id AS text) = :eid
             )
-        """), {"eid": eid_uuid})
+        """), {"eid": eid_str})
 
         await db.execute(text("""
             UPDATE employee_topic_assignments
             SET attempt1_id = NULL, attempt2_id = NULL
-            WHERE employee_id = :eid
-        """), {"eid": eid_uuid})
+            WHERE CAST(employee_id AS text) = :eid
+        """), {"eid": eid_str})
 
-        await db.execute(text("DELETE FROM test_attempts WHERE employee_id = :eid"), {"eid": eid_uuid})
-        await db.execute(text("DELETE FROM employee_topic_assignments WHERE employee_id = :eid"), {"eid": eid_uuid})
-        await db.execute(text("DELETE FROM employees WHERE id = :eid"), {"eid": eid_uuid})
+        await db.execute(text("DELETE FROM test_attempts WHERE CAST(employee_id AS text) = :eid"), {"eid": eid_str})
+        await db.execute(text("DELETE FROM employee_topic_assignments WHERE CAST(employee_id AS text) = :eid"), {"eid": eid_str})
+        await db.execute(text("DELETE FROM employees WHERE CAST(id AS text) = :eid"), {"eid": eid_str})
 
         await db.commit()
         return True
     except Exception as e:
         await db.rollback()
+        logger.error("Error deleting employee %s: %s", employee_id, e, exc_info=True)
         raise e
+
