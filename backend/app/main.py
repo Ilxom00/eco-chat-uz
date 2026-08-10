@@ -120,16 +120,28 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("❌ Branch seeding failed: {}", e)
 
-    # Seed topics and questions (4 topics, 115 questions)
+    # Seed topics and questions (4 topics, 114 questions)
     try:
+        _OFFICIAL_TOPICS = [
+            (1, "1-Мавзу", "Экологик экспертиза"),
+            (2, "2-Мавзу", "Атроф муҳитга таъсирни баҳолаш"),
+            (3, "3-Мавзу", "Давлат экологик экспертизасини ўтказиш ва эксперт"),
+            (4, "4-Мавзу", "Давлат экологик экспертизаси субъектлари"),
+        ]
+        async with engine.begin() as conn:
+            for seq, sn, fn in _OFFICIAL_TOPICS:
+                row_t = (await conn.execute(_text("SELECT id FROM topics WHERE sequence_order = :s"), {"s": seq})).fetchone()
+                if row_t:
+                    await conn.execute(
+                        _text("UPDATE topics SET short_name = :sn, full_name = :fn, is_active = true WHERE id = :id"),
+                        {"sn": sn, "fn": fn, "id": row_t[0]}
+                    )
+
         from app.seeds.seed import seed_topics_and_questions
-        result = await seed_topics_and_questions(engine)
-        if result:
-            logger.info("✅ 4 mavzu va 115 savol yuklandi")
-        else:
-            logger.info("✅ Savollar allaqachon mavjud")
+        await seed_topics_and_questions(engine, force=False)
+        logger.info("✅ 4 та кирилл мавзу ва саволлар синк қилинди")
     except Exception as e:
-        logger.error("❌ Question seeding failed: {}", e)
+        logger.error("❌ Topic seeding failed: {}", e)
 
     # Redis connectivity check
     try:
