@@ -48,83 +48,55 @@
 
             <!-- Dashboard Section -->
             <section id="dashboard" class="page-section active">
-                <div class="kpi-grid">
-                    <div class="kpi-card">
-                        <div class="kpi-icon">👥</div>
+
+                <!-- Row 1: Main counters -->
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px;">
+                    <div class="kpi-card" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border:none;">
+                        <div class="kpi-icon" style="background:rgba(255,255,255,0.2);color:#fff;">👥</div>
                         <div class="kpi-info">
-                            <h3>Жами ходимлар</h3>
-                            <div class="kpi-value" id="kpi-total-employees">0</div>
+                            <h3 style="color:rgba(255,255,255,0.8);font-size:13px;">Жами ходимлар</h3>
+                            <div class="kpi-value" id="kpi-total-employees" style="color:#fff;font-size:32px;">0</div>
                         </div>
                     </div>
-                    <div class="kpi-card">
-                        <div class="kpi-icon">▶️</div>
+                    <div class="kpi-card" style="background:linear-gradient(135deg,#166534,#16a34a);color:#fff;border:none;">
+                        <div class="kpi-icon" style="background:rgba(255,255,255,0.2);color:#fff;">✅</div>
                         <div class="kpi-info">
-                            <h3>Тестни бошлаганлар</h3>
-                            <div class="kpi-value" id="kpi-started">0</div>
+                            <h3 style="color:rgba(255,255,255,0.8);font-size:13px;">Тестни тугатганлар</h3>
+                            <div class="kpi-value" id="kpi-completed" style="color:#fff;font-size:32px;">0</div>
                         </div>
                     </div>
-                    <div class="kpi-card">
-                        <div class="kpi-icon">✅</div>
+                    <div class="kpi-card" style="background:linear-gradient(135deg,#92400e,#d97706);color:#fff;border:none;">
+                        <div class="kpi-icon" style="background:rgba(255,255,255,0.2);color:#fff;">🔄</div>
                         <div class="kpi-info">
-                            <h3>Тестни тугатганлар</h3>
-                            <div class="kpi-value" id="kpi-completed">0</div>
-                        </div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-icon active">🔄</div>
-                        <div class="kpi-info">
-                            <h3>Ҳозир тест ечаётганлар</h3>
-                            <div class="kpi-value" id="kpi-active">0</div>
-                        </div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-icon">📊</div>
-                        <div class="kpi-info">
-                            <h3>1-уриниш ўртача %</h3>
-                            <div class="kpi-value" id="kpi-avg1">0%</div>
-                        </div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-icon">📈</div>
-                        <div class="kpi-info">
-                            <h3>2-уриниш ўртача %</h3>
-                            <div class="kpi-value" id="kpi-avg2">0%</div>
-                        </div>
-                    </div>
-                    <div class="kpi-card accent">
-                        <div class="kpi-icon">🏅</div>
-                        <div class="kpi-info">
-                            <h3>Билим ўсиши</h3>
-                            <div class="kpi-value" id="kpi-growth">+0%</div>
-                        </div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-icon">📋</div>
-                        <div class="kpi-info">
-                            <h3>Жами тугалланган тестлар</h3>
-                            <div class="kpi-value" id="kpi-total-tests">0</div>
+                            <h3 style="color:rgba(255,255,255,0.8);font-size:13px;">Ҳозир тест ечаётганлар</h3>
+                            <div class="kpi-value" id="kpi-active" style="color:#fff;font-size:32px;">0</div>
                         </div>
                     </div>
                 </div>
 
-                <div class="table-container mt-4">
-                    <div class="table-header">
-                        <h2>Ходимлар рейтинги</h2>
-                        <div class="table-actions">
-                            <input type="text" class="form-control input-sm" placeholder="Қидириш..." id="empSearch">
+                <!-- Row 2: Per-topic stats + total -->
+                <div id="topicStatsRow" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;">
+                    <!-- Filled dynamically by JS -->
+                    <div class="kpi-card" style="animation:pulse 1.5s infinite;opacity:0.6;"><div class="kpi-info"><h3>Юкланмоқда...</h3></div></div>
+                </div>
+
+                <!-- Employee Rating Table -->
+                <div class="table-container">
+                    <div class="table-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <h2 style="margin:0;font-size:18px;">📊 Ходимлар рейтинги</h2>
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <input type="text" class="form-control input-sm" placeholder="🔍 Қидириш..." id="empSearch" style="width:220px;">
                         </div>
                     </div>
-                    <div style="overflow-x:auto;">
-                    <table class="data-table" id="ratingTable" style="min-width:1400px; border-collapse:collapse; font-size:13px;">
-                        <thead id="ratingTableHead">
-                            <!-- Filled dynamically by JS based on topic count -->
-                        </thead>
+                    <div style="overflow-x:auto;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+                    <table id="ratingTable" style="width:100%;min-width:1400px;border-collapse:collapse;font-size:13px;">
+                        <thead id="ratingTableHead"></thead>
                         <tbody id="employeesTableBody">
-                            <tr><td colspan="20" style="text-align:center;padding:20px;color:var(--text-secondary)">Yuklanmoqda...</td></tr>
+                            <tr><td colspan="20" style="text-align:center;padding:32px;color:#9ca3af;">Маълумот юкланмоқда...</td></tr>
                         </tbody>
                     </table>
                     </div>
-                    <div class="pagination" id="empPagination"></div>
+                    <div id="empPagination" style="margin-top:16px;"></div>
                 </div>
             </section>
 
