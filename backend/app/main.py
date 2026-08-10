@@ -1,7 +1,7 @@
 """
 eco-chat.uz — FastAPI Application Entry Point
 Includes: API routes, Telegram bot startup, static files, health check
-Full Server Deploy - Auto-Refresh Added: 2026-08-11
+Full Server Deploy - Auto-Refresh Scope Fixed: 2026-08-11
 """
 from contextlib import asynccontextmanager
 import datetime
