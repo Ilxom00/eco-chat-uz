@@ -21,7 +21,8 @@ def _force_uuid(val):
 
 
 async def get_or_create_employee(db: AsyncSession, telegram_user_id: int) -> tuple[Employee, bool]:
-    result = await db.execute(select(Employee).filter(Employee.telegram_user_id == telegram_user_id))
+    tg_id = int(telegram_user_id)
+    result = await db.execute(select(Employee).filter(Employee.telegram_user_id == tg_id))
     employee = result.scalar_one_or_none()
     
     if employee:
@@ -29,7 +30,7 @@ async def get_or_create_employee(db: AsyncSession, telegram_user_id: int) -> tup
         
     employee = Employee(
         id=uuid.uuid4(),
-        telegram_user_id=telegram_user_id,
+        telegram_user_id=tg_id,
         full_name="Unknown",
         registration_state="PENDING"
     )
@@ -51,6 +52,7 @@ async def register_employee(
     Guarantees zero-deletion persistence.
     """
     try:
+        tg_id = int(telegram_user_id)
         branch_uuid = None
         if branch_name_or_id:
             from app.services.branch_service import resolve_branch_id
@@ -67,7 +69,7 @@ async def register_employee(
             if b_row:
                 branch_uuid = _force_uuid(b_row[0])
 
-        emp_res = await db.execute(select(Employee).filter(Employee.telegram_user_id == telegram_user_id))
+        emp_res = await db.execute(select(Employee).filter(Employee.telegram_user_id == tg_id))
         emp = emp_res.scalar_one_or_none()
 
         if emp:
@@ -80,7 +82,7 @@ async def register_employee(
         else:
             emp = Employee(
                 id=uuid.uuid4(),
-                telegram_user_id=telegram_user_id,
+                telegram_user_id=tg_id,
                 full_name=full_name,
                 branch_id=branch_uuid,
                 phone=phone or "",
@@ -91,7 +93,7 @@ async def register_employee(
 
         await db.commit()
         await db.refresh(emp)
-        logger.info("Successfully registered/updated employee in DB: %s (TG: %d)", full_name, telegram_user_id)
+        logger.info("Successfully registered/updated employee in DB: %s (TG: %d)", full_name, tg_id)
         return emp
 
     except Exception as e:
@@ -110,9 +112,23 @@ async def update_registration(
     return await register_employee(db, telegram_user_id, full_name, str(branch_id) if branch_id else None, phone)
 
 
-async def get_employee_by_telegram_id(db: AsyncSession, telegram_user_id: int) -> Employee | None:
-    result = await db.execute(select(Employee).filter(Employee.telegram_user_id == telegram_user_id))
-    return result.scalar_one_or_none()
+async def get_employee_by_telegram_id(db: AsyncSession, telegram_user_id: int | str) -> Employee | None:
+    try:
+        tg_id = int(telegram_user_id)
+        result = await db.execute(select(Employee).filter(Employee.telegram_user_id == tg_id))
+        emp = result.scalar_one_or_none()
+        if emp:
+            return emp
+
+        # Fallback SQL query for resilient matching
+        res_alt = await db.execute(text("SELECT id FROM employees WHERE telegram_user_id = :tg"), {"tg": tg_id})
+        row = res_alt.fetchone()
+        if row:
+            return await db.get(Employee, _force_uuid(row[0]))
+        return None
+    except Exception as e:
+        logger.error("Error fetching employee by TG ID %s: %s", telegram_user_id, e)
+        return None
 
 
 async def get_employee_full_detail(db: AsyncSession, employee_id: str) -> dict:
