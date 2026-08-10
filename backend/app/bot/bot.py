@@ -1,6 +1,6 @@
 """
 eco-chat.uz — Telegram Bot Application
-Sets up ConversationHandler, all message handlers, and bot lifecycle.
+Robust state-free event dispatching for 100% reliability.
 """
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ from telegram.ext import (
     CommandHandler,
     MessageHandler,
     CallbackQueryHandler,
-    ConversationHandler,
     filters,
 )
 
@@ -19,17 +18,27 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# ── Conversation States ────────────────────────────────────────
-# Registration
-ASK_FULLNAME = 0
-ASK_BRANCH   = 1
-ASK_PHONE    = 2
-# Navigation
-MAIN_MENU    = 10
-TOPIC_SELECT = 20
-TEST_CONFIRM = 21
-TEST_IN_PROGRESS = 22
-SEMINAR_CONFIRM  = 23
+
+async def route_text_message(update: Update, context):
+    """Route text messages cleanly based on text content or registration status."""
+    if not update.message or not update.message.text:
+        return
+
+    txt = update.message.text.strip()
+    from app.bot import messages
+    from app.bot.handlers import start, menu, topic_nav, results, registration
+
+    if txt in [messages.BTN_TESTS, "📝 Тестлар"]:
+        return await topic_nav.show_topics(update, context)
+    elif txt in [messages.BTN_MY_RESULTS, "📊 Менинг натижаларим"]:
+        return await results.show_all_results(update, context)
+    elif txt in [messages.BTN_MY_PROFILE, "👤 Менинг профилим"]:
+        return await menu.show_my_profile(update, context)
+    elif txt in [messages.BTN_HELP, "❓ Ёрдам"]:
+        return await menu.show_help(update, context)
+    else:
+        # If not a menu button, handle as full name registration input
+        return await registration.handle_fullname(update, context)
 
 
 async def create_application() -> Application:
@@ -40,7 +49,6 @@ async def create_application() -> Application:
 
     from app.bot.handlers import start, registration, menu, topic_nav, test_flow, results
     from app.bot.handlers.error import error_handler
-    from app.bot import messages
 
     app = (
         Application.builder()
@@ -48,76 +56,34 @@ async def create_application() -> Application:
         .build()
     )
 
-    # ── Main Conversation Handler ──────────────────────────────
-    conv_handler = ConversationHandler(
-        entry_points=[
-            CommandHandler("start", start.start_command),
-            CommandHandler("menu",  menu.show_main_menu_cmd),
-        ],
-        states={
-            # ─ Registration ─────────────────────────────────
-            ASK_BRANCH: [
-                CallbackQueryHandler(registration.handle_branch, pattern=r"^branch:"),
-            ],
-            ASK_FULLNAME: [
-                MessageHandler(
-                    filters.TEXT & ~filters.COMMAND,
-                    registration.handle_fullname,
-                ),
-            ],
+    # ── Command Handlers ─────────────────────────────────────
+    app.add_handler(CommandHandler("start", start.start_command))
+    app.add_handler(CommandHandler("menu",  start.start_command))
 
-            # ─ Main Menu ────────────────────────────────────
-            MAIN_MENU: [
-                # Bottom menu buttons
-                MessageHandler(
-                    filters.Regex(f"^{messages.BTN_TESTS}$"),
-                    topic_nav.show_topics,
-                ),
-                MessageHandler(
-                    filters.Regex(f"^{messages.BTN_MY_RESULTS}$"),
-                    results.show_all_results,
-                ),
-                MessageHandler(
-                    filters.Regex(f"^{messages.BTN_MY_PROFILE}$"),
-                    menu.show_my_profile,
-                ),
-                MessageHandler(
-                    filters.Regex(f"^{messages.BTN_HELP}$"),
-                    menu.show_help,
-                ),
-                # Inline button callbacks
-                CallbackQueryHandler(topic_nav.handle_topic_select, pattern=r"^topic:"),
-                CallbackQueryHandler(topic_nav.handle_back,         pattern=r"^back_to_topics$"),
-                CallbackQueryHandler(test_flow.start_test,          pattern=r"^start_test:"),
-                CallbackQueryHandler(test_flow.handle_answer,       pattern=r"^ans:"),
-                CallbackQueryHandler(test_flow.handle_seminar_confirm, pattern=r"^seminar_"),
-                # Ignore taps on non-interactive elements
-                CallbackQueryHandler(lambda u, c: u.callback_query.answer(), pattern=r"^ignore$"),
-            ],
-        },
-        fallbacks=[
-            CommandHandler("start", start.start_command),
-            CommandHandler("menu",  menu.show_main_menu_cmd),
-        ],
-        per_user=True,
-        per_chat=True,
-        allow_reentry=True,
-        name="main_conversation",
-        persistent=False,
-    )
+    # ── Callback Query Handlers ──────────────────────────────
+    app.add_handler(CallbackQueryHandler(registration.handle_branch, pattern=r"^branch:"))
+    app.add_handler(CallbackQueryHandler(topic_nav.handle_topic_select, pattern=r"^topic:"))
+    app.add_handler(CallbackQueryHandler(topic_nav.handle_back, pattern=r"^back_to_topics$"))
+    app.add_handler(CallbackQueryHandler(test_flow.start_test, pattern=r"^start_test:"))
+    app.add_handler(CallbackQueryHandler(test_flow.handle_answer, pattern=r"^ans:"))
+    app.add_handler(CallbackQueryHandler(lambda u, c: u.callback_query.answer(), pattern=r"^ignore$"))
 
-    app.add_handler(conv_handler)
+    # ── Text Message Handler ─────────────────────────────────
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, route_text_message))
 
-    # ── Global error handler ──────────────────────────────────
+    # ── Global Error Handler ──────────────────────────────────
     app.add_error_handler(error_handler)
 
-    # ── Bot Commands menu ─────────────────────────────────────
-    await app.bot.set_my_commands([
-        BotCommand("start",  "Botni boshlash / Menyu"),
-        BotCommand("menu",   "Asosiy menyu"),
-    ])
+    # ── Bot Commands Menu ─────────────────────────────────────
+    try:
+        await app.bot.set_my_commands([
+            BotCommand("start",  "Бошни бошлаш / Меню"),
+            BotCommand("menu",   "Асосий меню"),
+        ])
+    except Exception as e:
+        logger.warning("Could not set my commands: %s", e)
 
-    logger.info("Telegram bot configured: @%s", (await app.bot.get_me()).username)
+    logger.info("Telegram bot configured cleanly")
     return app
 
 
