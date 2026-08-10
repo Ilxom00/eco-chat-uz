@@ -4,7 +4,7 @@ from app.database import get_db
 from app.api.deps import get_current_admin
 from app.services import result_service
 
-router = APIRouter(prefix="/dashboard", tags=["dashboard"], dependencies=[Depends(get_current_admin)])
+router = APIRouter(tags=["dashboard"], dependencies=[Depends(get_current_admin)])
 
 @router.get("/stats")
 async def get_stats(db: AsyncSession = Depends(get_db)):
