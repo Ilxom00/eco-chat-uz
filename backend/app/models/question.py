@@ -1,3 +1,8 @@
+"""
+question.py - Uses String(36) for ALL UUID FK columns.
+Works for BOTH SQLite (text) and PostgreSQL (auto-casts varchar to uuid).
+DO NOT use sqlalchemy.dialects.postgresql.UUID here.
+"""
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, ForeignKey, CheckConstraint, Index
 from sqlalchemy.sql import func
 from .base import BaseModel
@@ -6,6 +11,7 @@ from .base import BaseModel
 class Question(BaseModel):
     __tablename__ = 'questions'
 
+    # topic_id is String(36) — NOT UUID(as_uuid=True) — avoids 'hex' attribute error
     topic_id = Column(String(36), ForeignKey('topics.id'), nullable=False)
     text = Column(Text, nullable=False)
     status = Column(String(20), nullable=False, default='ACTIVE')
@@ -21,6 +27,7 @@ class Question(BaseModel):
 class QuestionAnswer(BaseModel):
     __tablename__ = 'question_answers'
 
+    # question_id is String(36) — NOT UUID(as_uuid=True)
     question_id = Column(String(36), ForeignKey('questions.id'), nullable=False)
     text = Column(Text, nullable=False)
     is_correct = Column(Boolean, nullable=False, default=False)
