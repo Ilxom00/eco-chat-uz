@@ -33,6 +33,7 @@ async def resolve_branch_id(
     branch_name: Optional[str] = None
 ) -> Optional[uuid.UUID]:
     """Safely resolve valid uuid.UUID for branch from either branch_id or branch_name."""
+    # 1. Try branch_id if valid UUID
     if branch_id:
         if isinstance(branch_id, uuid.UUID):
             return branch_id
@@ -43,17 +44,33 @@ async def resolve_branch_id(
             if b:
                 return b.id
         except (ValueError, TypeError):
-            pass  # Not a valid UUID (e.g. 'fb_1')
+            pass
 
+    # 2. Try exact name match
     if branch_name:
-        res = await db.execute(select(Branch).filter(Branch.name == branch_name))
+        clean_name = branch_name.strip()
+        res = await db.execute(select(Branch).filter(Branch.name == clean_name))
         b = res.scalar_one_or_none()
         if b:
             return b.id
-        
-        # Auto-create branch if not found by name
-        new_b = await create_branch(db, name=branch_name)
-        return new_b.id
+
+        # 3. Try fuzzy/case-insensitive match
+        res_like = await db.execute(select(Branch).filter(Branch.name.ilike(f"%{clean_name}%")))
+        b_like = res_like.scalars().first()
+        if b_like:
+            return b_like.id
+
+        # 4. Auto-create branch if not found by name
+        try:
+            new_b = await create_branch(db, name=clean_name)
+            return new_b.id
+        except Exception:
+            pass
+
+    # 5. Fallback: return first available branch in DB
+    all_b = await get_all_branches(db, False)
+    if all_b:
+        return all_b[0].id
 
     return None
 
