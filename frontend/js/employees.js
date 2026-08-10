@@ -184,10 +184,21 @@ const Employees = {
             const content = document.getElementById('attemptDetailContent');
             if (!content) return;
 
+            if (data && data.error_msg) {
+                content.innerHTML = `
+                    <div style="padding:20px;background:#fee2e2;border:1px solid #fca5a5;border-radius:12px;color:#991b1b;font-family:monospace;white-space:pre-wrap;font-size:12px;margin:20px 0;text-align:left;line-height:1.4;">
+                        <strong>SERVER ERROR:</strong> ${data.error_msg}
+                        <hr style="border:0;border-top:1px solid #fca5a5;margin:10px 0;">
+                        ${data.error_trace}
+                    </div>`;
+                return;
+            }
+
             if (!data || !data.questions || data.questions.length === 0) {
                 content.innerHTML = `<div style="text-align:center;padding:40px;color:#dc2626;font-weight:700;">Маълумот топилмади</div>`;
                 return;
             }
+
 
             const isPassed = data.percentage >= 70;
 
