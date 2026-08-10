@@ -46,34 +46,28 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("❌ Database init failed: {}", e)
 
-    # Create superadmin if not exists
+    # Create superadmin if not exists (raw SQL - reliable)
     try:
-        from sqlalchemy.ext.asyncio import AsyncSession
-        from sqlalchemy.orm import sessionmaker
-        from sqlalchemy.future import select
-        from app.models.admin import Admin
-        from app.utils.security import get_password_hash
-        import os
+        import uuid as _uuid
+        import os as _os
+        from sqlalchemy import text as _text
+        from app.utils.security import get_password_hash as _gph
 
-        admin_user = os.getenv("ADMIN_USERNAME", "user")
-        admin_pass = os.getenv("ADMIN_PASSWORD", "12345")
+        _admin_user = _os.getenv("ADMIN_USERNAME", "user")
+        _admin_pass = _os.getenv("ADMIN_PASSWORD", "12345")
 
-        AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(select(Admin).where(Admin.username == admin_user))
-            existing = result.scalar_one_or_none()
-            if not existing:
-                new_admin = Admin(
-                    username=admin_user,
-                    password_hash=get_password_hash(admin_pass),
-                    full_name="Bosh Administrator",
-                    is_active=True,
+        async with engine.begin() as conn:
+            row = (await conn.execute(_text("SELECT id FROM admins WHERE username = :u"), {"u": _admin_user})).fetchone()
+            if not row:
+                _pwd = _gph(_admin_pass)
+                _aid = str(_uuid.uuid4())
+                await conn.execute(
+                    _text("INSERT INTO admins (id, username, password_hash, full_name, is_active) VALUES (:id, :u, :pw, :fn, 1)"),
+                    {"id": _aid, "u": _admin_user, "pw": _pwd, "fn": "Bosh Administrator"}
                 )
-                session.add(new_admin)
-                await session.commit()
-                logger.info("✅ Superadmin '{}' created", admin_user)
+                logger.info("✅ Superadmin '{}' created via raw SQL", _admin_user)
             else:
-                logger.info("✅ Superadmin '{}' already exists", admin_user)
+                logger.info("✅ Superadmin '{}' exists", _admin_user)
     except Exception as e:
         logger.error("❌ Superadmin creation failed: {}", e)
 
