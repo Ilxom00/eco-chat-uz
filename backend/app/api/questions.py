@@ -1,8 +1,11 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.api.deps import get_current_admin
 from app.services import question_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["questions"], dependencies=[Depends(get_current_admin)])
 
@@ -23,7 +26,8 @@ async def create_question(topic_id: str, data: dict, db: AsyncSession = Depends(
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Error creating question for topic %s: %s", topic_id, e, exc_info=True)
+        raise HTTPException(status_code=400, detail=f"Савол қўшишда хатолик: {str(e)}")
 
 @router.delete("/questions/{id}")
 async def delete_question(id: str, db: AsyncSession = Depends(get_db)):
