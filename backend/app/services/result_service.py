@@ -62,8 +62,11 @@ async def get_dashboard_stats(db: AsyncSession) -> dict:
         """))
         topic_stats = []
         for row in topic_stats_raw.fetchall():
-            a1 = float(row[2]) if row[2] is not None else None
-            a2 = float(row[3]) if row[3] is not None else None
+            # raw score 0-15, convert to percentage
+            a1_raw = float(row[2]) if row[2] is not None else None
+            a2_raw = float(row[3]) if row[3] is not None else None
+            a1 = round(a1_raw / 15 * 100, 1) if a1_raw is not None else None
+            a2 = round(a2_raw / 15 * 100, 1) if a2_raw is not None else None
             diff = round(a2 - a1, 1) if (a1 is not None and a2 is not None) else None
             topic_stats.append({
                 "seq": row[0],
@@ -174,8 +177,12 @@ async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: in
                 att1 = next((r for r in att_rows if r[0] == 1), None)
                 att2 = next((r for r in att_rows if r[0] == 2), None)
 
-                s1 = att1[1] if att1 else None
-                s2 = att2[1] if att2 else None
+                s1_raw = att1[1] if att1 else None
+                s2_raw = att2[1] if att2 else None
+
+                # Convert raw score (0-15) to percentage (0-100)
+                s1 = round(s1_raw / 15 * 100) if s1_raw is not None else None
+                s2 = round(s2_raw / 15 * 100) if s2_raw is not None else None
                 diff = (s2 - s1) if (s1 is not None and s2 is not None) else None
 
                 if s1 is not None:
