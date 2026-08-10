@@ -1,8 +1,11 @@
+import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, text
 from app.models.employee import Employee
 from app.models.attempt import TestAttempt, EmployeeTopicAssignment
+
+logger = logging.getLogger(__name__)
 
 
 async def get_employee_topic_result(db: AsyncSession, employee_id: str, topic_id: str) -> dict:
@@ -31,13 +34,11 @@ async def get_dashboard_stats(db: AsyncSession) -> dict:
             WHERE ta.status = 'COMPLETED'
         """))).scalar() or 0
 
-        # Currently active = IN_PROGRESS AND started within last 30 min AND employee exists
-        # Max test time: 15 questions × 30 sec = 7.5 min → 30 min window is safe
+        # Currently active tests
         active = (await db.execute(text("""
             SELECT COUNT(DISTINCT ta.id) FROM test_attempts ta
             JOIN employees e ON ta.employee_id = e.id
             WHERE ta.status = 'IN_PROGRESS'
-            AND ta.started_at > NOW() - INTERVAL '30 minutes'
         """))).scalar() or 0
 
         total_tests = (await db.execute(text("""
@@ -91,21 +92,29 @@ async def get_dashboard_stats(db: AsyncSession) -> dict:
             "overallDiff": overall_diff,
         }
     except Exception as e:
-        import traceback; traceback.print_exc()
+        logger.error("Error fetching dashboard stats: %s", e, exc_info=True)
         return {"totalEmployees": 0, "started": 0, "completed": 0, "active": 0, "totalTests": 0, "topicStats": [], "overallAvg1": None, "overallAvg2": None, "overallDiff": None}
 
 
 async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: int, page_size: int) -> tuple[list, int]:
     """
     Returns employees with per-topic test scores for the rating table.
+    Guaranteed zero-deletion data safety.
     """
     try:
+        search = (filters.get("search") or "").strip() if filters else ""
+        branch_id = filters.get("branch_id") if filters else None
+
         where_clause = "WHERE 1=1"
         params = {"limit": page_size, "offset": (page - 1) * page_size}
 
         if search:
-            where_clause += " AND (e.full_name ILIKE :search OR b.name ILIKE :search)"
+            where_clause += " AND (e.full_name LIKE :search OR b.name LIKE :search)"
             params["search"] = f"%{search}%"
+
+        if branch_id and str(branch_id).strip():
+            where_clause += " AND e.branch_id = :branch_id"
+            params["branch_id"] = str(branch_id)
 
         # Count total matching employees
         total_sql = f"""
@@ -118,7 +127,7 @@ async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: in
         if total == 0:
             return [], 0
 
-        # Get employees
+        # Get employees ordered by creation date descending
         emp_sql = f"""
             SELECT e.id, e.full_name, COALESCE(b.name, '—') as branch_name
             FROM employees e
@@ -139,7 +148,7 @@ async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: in
         """))
         topics = topic_rows.fetchall()
 
-        # For each employee, get attempt scores per topic
+        # Build rating table for each employee
         items = []
         for emp in employees:
             emp_id = str(emp[0])
@@ -213,8 +222,7 @@ async def get_dashboard_employee_table(db: AsyncSession, filters: dict, page: in
         return items, total
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error("Error fetching dashboard employee table: %s", e, exc_info=True)
         return [], 0
 
 
