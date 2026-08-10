@@ -29,6 +29,22 @@ async def create_question(topic_id: str, data: dict, db: AsyncSession = Depends(
         logger.error("Error creating question for topic %s: %s", topic_id, e, exc_info=True)
         raise HTTPException(status_code=400, detail=f"Савол қўшишда хатолик: {str(e)}")
 
+@router.put("/questions/{id}")
+@router.patch("/questions/{id}")
+async def update_question(id: str, data: dict, db: AsyncSession = Depends(get_db)):
+    text_content = data.get("text")
+    answers = data.get("answers")
+    if not text_content or not answers:
+        raise HTTPException(status_code=400, detail="Савол матни ва жавоблар зарур")
+    try:
+        await question_service.update_question_with_answers(db, id, text_content=text_content, answers=answers)
+        return {"message": "Success"}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logger.error("Error updating question %s: %s", id, e, exc_info=True)
+        raise HTTPException(status_code=400, detail=f"Таҳрирлашда хатолик: {str(e)}")
+
 @router.delete("/questions/{id}")
 async def delete_question(id: str, db: AsyncSession = Depends(get_db)):
     await question_service.delete_question_permanent(db, id)
