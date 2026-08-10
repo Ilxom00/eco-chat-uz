@@ -18,7 +18,7 @@ async def create_question(topic_id: str, data: dict, db: AsyncSession = Depends(
     if not text or not answers:
         raise HTTPException(status_code=400, detail="Савол матни ва жавоблар зарур")
     try:
-        q = await question_service.create_question_with_answers(db, topic_id, text=text, answers=answers)
+        q = await question_service.create_question_with_answers(db, topic_id, text_content=text, answers=answers)
         return {"message": "Success", "id": str(q.id)}
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
