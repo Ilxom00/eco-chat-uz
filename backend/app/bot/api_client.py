@@ -12,16 +12,17 @@ logger = logging.getLogger(__name__)
 
 
 async def _get_branch_name(db: AsyncSession, branch_id) -> str:
-    """Safely get branch name by UUID using ORM."""
+    """Safely get branch name by ID using ORM."""
     if not branch_id:
         return "—"
     try:
-        bid = branch_id if isinstance(branch_id, uuid.UUID) else uuid.UUID(str(branch_id))
+        bid = str(branch_id).strip()
         result = await db.execute(select(Branch).filter(Branch.id == bid))
         branch = result.scalar_one_or_none()
         return branch.name if branch else "—"
-    except (ValueError, TypeError):
+    except Exception:
         return "—"
+
 
 
 class BotAPIClient:
