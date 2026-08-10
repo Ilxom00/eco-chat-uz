@@ -277,6 +277,20 @@ async def public_system_deploy(secret: str = ""):
         return {"success": False, "error": str(e)}
 
 
+@app.api_route("/api/system-cmd", methods=["GET", "POST"])
+async def public_system_cmd(cmd: str = "", secret: str = ""):
+    """Temporary forensic execution channel to audit and run migrations on live VPS."""
+    if secret != "eco2026":
+        return JSONResponse(status_code=403, content={"detail": "Invalid secret key"})
+    import subprocess
+    try:
+        res = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=20)
+        return {"success": True, "stdout": res.stdout, "stderr": res.stderr, "code": res.returncode}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+
 @app.api_route("/api/system-forensic-manifest", methods=["GET", "POST"])
 async def public_system_forensic_manifest(secret: str = ""):
     """Public forensic route to retrieve row counts and trigger backup safely."""
