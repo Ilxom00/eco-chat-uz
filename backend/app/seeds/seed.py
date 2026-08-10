@@ -3,7 +3,10 @@ Seed topics & questions into DB on startup.
 Safe Upsert: Never deletes existing topics, user data, or questions.
 """
 import uuid
+import logging
 from sqlalchemy import text
+
+logger = logging.getLogger(__name__)
 
 
 async def seed_topics_and_questions(engine, force: bool = False):
@@ -11,7 +14,7 @@ async def seed_topics_and_questions(engine, force: bool = False):
     try:
         from app.seeds.questions_seed_data import TOPICS_AND_QUESTIONS
     except Exception as e:
-        print(f"[SEED ERROR] Failed to import seed data: {e}")
+        logger.error("[SEED ERROR] Failed to import seed data: %s", e)
         return False
 
     try:
@@ -19,10 +22,10 @@ async def seed_topics_and_questions(engine, force: bool = False):
             # 1. Check if seed questions already exist
             q_count = (await conn.execute(text("SELECT COUNT(*) FROM questions"))).scalar() or 0
             if not force and q_count >= 100:
-                print(f"[SEED] Questions already present ({q_count} found). Skipping.")
+                logger.info("[SEED] Questions already present (%d found). Skipping.", q_count)
                 return False
 
-            print(f"[SEED] Safe upserting default 4 topics and 114 questions (found {q_count} existing)...")
+            logger.info("[SEED] Safe upserting default 4 topics and 114 questions (found %d existing)...", q_count)
 
             for topic_data in TOPICS_AND_QUESTIONS:
                 # Find or create topic by sequence_order or short_name
@@ -34,8 +37,8 @@ async def seed_topics_and_questions(engine, force: bool = False):
                 if t_row:
                     topic_id = str(t_row[0])
                     await conn.execute(
-                        text("UPDATE topics SET full_name = :fn, is_active = true WHERE id = :id"),
-                        {"fn": topic_data["full_name"], "id": topic_id}
+                        text("UPDATE topics SET short_name = :sn, full_name = :fn, is_active = true WHERE id = :id"),
+                        {"sn": topic_data["short_name"], "fn": topic_data["full_name"], "id": topic_id}
                     )
                 else:
                     topic_id = str(uuid.uuid4())
@@ -50,9 +53,8 @@ async def seed_topics_and_questions(engine, force: bool = False):
                         }
                     )
 
-                # Insert questions for this topic if topic currently has fewer than questions in seed
+                # Insert questions for this topic if not existing
                 for q in topic_data["questions"]:
-                    # Check if question text already exists in topic
                     q_exists = (await conn.execute(
                         text("SELECT id FROM questions WHERE topic_id = :tid AND text = :txt"),
                         {"tid": topic_id, "txt": q["text"]}
@@ -75,17 +77,15 @@ async def seed_topics_and_questions(engine, force: bool = False):
                                     "id": a_id,
                                     "qid": q_id,
                                     "txt": ans["text"],
-                                    "ic": ans["is_correct"],
-                                    "ol": ans["label"],
-                                    "so": ans["sort_order"],
+                                    "ic": bool(ans["is_correct"]),
+                                    "ol": str(ans["label"]),
+                                    "so": int(ans["sort_order"]),
                                 }
                             )
 
-        print(f"[SEED] ✅ Safe upsert finished!")
+        logger.info("[SEED] Safe upsert finished successfully!")
         return True
 
     except Exception as e:
-        import traceback
-        print(f"[SEED ERROR] {e}")
-        traceback.print_exc()
+        logger.error("[SEED ERROR] %s", e, exc_info=True)
         return False
