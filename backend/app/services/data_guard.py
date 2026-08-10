@@ -47,12 +47,13 @@ async def auto_backup_data(db: AsyncSession):
             a["assignment_id"] = str(a["assignment_id"]) if a.get("assignment_id") else None
 
         # 3. Get assignments
-        asgn_res = await db.execute(text("SELECT id, employee_id, topic_id, is_active FROM employee_topic_assignments"))
+        asgn_res = await db.execute(text("SELECT id, employee_id, topic_id, status FROM employee_topic_assignments"))
         assignments = [dict(r._mapping) for r in asgn_res.fetchall()]
         for asg in assignments:
             asg["id"] = str(asg["id"])
             asg["employee_id"] = str(asg["employee_id"])
             asg["topic_id"] = str(asg["topic_id"])
+            asg["status"] = str(asg.get("status", "ASSIGNED"))
 
         data = {
             "timestamp": datetime.now().isoformat(),
@@ -140,15 +141,16 @@ async def auto_restore_if_empty(db: AsyncSession):
         # 2. Restore assignments
         for asg in assignments:
             await db.execute(text("""
-                INSERT INTO employee_topic_assignments (id, employee_id, topic_id, is_active)
-                VALUES (:id, :eid, :tid, :act)
+                INSERT INTO employee_topic_assignments (id, employee_id, topic_id, status)
+                VALUES (:id, :eid, :tid, :st)
                 ON CONFLICT (id) DO NOTHING
             """), {
                 "id": str(asg["id"]),
                 "eid": str(asg["employee_id"]),
                 "tid": str(asg["topic_id"]),
-                "act": bool(asg.get("is_active", True))
+                "st": str(asg.get("status", "ASSIGNED"))
             })
+
 
         # 3. Restore attempts
         for a in attempts:
