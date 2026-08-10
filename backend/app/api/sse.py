@@ -4,7 +4,7 @@ import asyncio
 from app.api.deps import get_current_admin
 from app.services.sse_service import broadcaster
 
-router = APIRouter(prefix="/sse", tags=["sse"])
+router = APIRouter(tags=["sse"])
 
 @router.get("/dashboard")
 async def sse_dashboard(request: Request, admin=Depends(get_current_admin)):
