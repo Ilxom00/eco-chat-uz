@@ -1,3 +1,4 @@
+import logging
 import asyncio
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -5,153 +6,149 @@ from .. import messages
 from ..keyboards import get_answer_keyboard, get_seminar_confirm_keyboard
 from ..api_client import bot_api
 
+logger = logging.getLogger(__name__)
+
+TOPIC_SELECT = 20
 TEST_IN_PROGRESS = 22
 SEMINAR_CONFIRM = 23
 
+
 async def start_test(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    if query:
+        await query.answer()
     
     topic_id = context.user_data.get('current_topic_id')
     user_id = update.effective_user.id
     
+    if not topic_id:
+        if query:
+            await query.edit_message_text("⚠️ Илтимос, аввал мавзуни танланг.")
+        else:
+            await update.message.reply_text("⚠️ Илтимос, аввал мавзуни танланг.")
+        return TOPIC_SELECT
+
     try:
-        # Determine attempt number based on logic (simplified here)
         attempt_number = 1
         attempt_data = await bot_api.start_attempt(user_id, topic_id, attempt_number)
-        context.user_data['attempt_id'] = attempt_data['id']
         
-        question_data = await bot_api.get_current_question(attempt_data['id'])
+        if "error" in attempt_data or not attempt_data.get("attempt_id"):
+            err_msg = attempt_data.get("error", "Тестни бошлашда хатолик юз берди.")
+            if "completed first" in str(err_msg).lower() or "permissionerror" in str(err_msg).lower():
+                err_msg = "Аввалги мавзуни тугатмасдан кейинги мавзуга ўтиб бўлмайди."
+            if query:
+                await query.edit_message_text(f"⚠️ {err_msg}")
+            else:
+                await update.message.reply_text(f"⚠️ {err_msg}")
+            return TOPIC_SELECT
+
+        attempt_id = attempt_data["attempt_id"]
+        context.user_data['attempt_id'] = attempt_id
+        
+        question_data = attempt_data.get("first_question")
+        if not question_data:
+            res = await bot_api.get_current_question(attempt_id)
+            question_data = res.get("question")
+            
         await show_question(update, context, question_data)
         return TEST_IN_PROGRESS
+
     except Exception as e:
-        await query.edit_message_text(messages.ERROR_NETWORK)
-        return 20 # TOPIC_SELECT
+        logger.error("Error starting test for user %s topic %s: %s", user_id, topic_id, e, exc_info=True)
+        err_text = "⚠️ Тестни бошлашда хатолик юз берди. Илтимос, қайта уриниб кўринг."
+        if "completed first" in str(e).lower():
+            err_text = "⚠️ Аввалги мавзуни тугатмасдан кейинги мавзуга ўтиб бўлмайди."
+        if query:
+            await query.edit_message_text(err_text)
+        else:
+            await update.message.reply_text(err_text)
+        return TOPIC_SELECT
+
 
 async def show_question(update: Update, context: ContextTypes.DEFAULT_TYPE, question_data: dict):
     if not question_data or not question_data.get('question_text'):
-        # Test finished
         return await show_attempt_results(update, context, {})
         
-    text = messages.QUESTION_TEXT.format(
-        current=question_data.get('current', 1),
-        total=15,
-        remaining=30,
-        question_text=question_data['question_text']
+    current = question_data.get('current_index', question_data.get('current', 1))
+    total = 15
+    q_text = question_data.get('question_text', '')
+    
+    text = (
+        f"📝 <b>Савол {current} / {total}:</b>\n\n"
+        f"<b>{q_text}</b>\n\n"
+        f"⏱ <i>Вақт: 30 сония</i>"
     )
     
-    keyboard = get_answer_keyboard(question_data['answers'])
+    answers = question_data.get('answers', [])
+    keyboard = get_answer_keyboard(answers)
     
     if update.callback_query:
-        msg = await update.callback_query.edit_message_text(text, reply_markup=keyboard)
+        try:
+            msg = await update.callback_query.edit_message_text(text, reply_markup=keyboard, parse_mode='HTML')
+        except Exception:
+            msg = await context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=keyboard, parse_mode='HTML')
     else:
-        msg = await context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=keyboard)
+        msg = await context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=keyboard, parse_mode='HTML')
         
     context.user_data['current_msg_id'] = msg.message_id
-    context.user_data['current_question_order'] = question_data.get('display_order', 1)
-    
-    # Schedule timeout job
-    context.job_queue.run_once(handle_timeout_job, 30, data={
-        'chat_id': update.effective_chat.id,
-        'attempt_id': context.user_data['attempt_id'],
-        'order': question_data.get('display_order', 1)
-    }, name=str(update.effective_user.id))
+    context.user_data['current_question_order'] = question_data.get('display_order', current)
+
 
 async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    if query:
+        await query.answer()
     
-    data = query.data
+    data = query.data if query else ""
     if not data.startswith("ans:"):
         return TEST_IN_PROGRESS
         
-    _, display_label, answer_id = data.split(":")
+    parts = data.split(":")
+    if len(parts) < 3:
+        return TEST_IN_PROGRESS
+
+    order = int(parts[1])
+    answer_id = parts[2]
     attempt_id = context.user_data.get('attempt_id')
-    order = context.user_data.get('current_question_order')
     
-    # Cancel timeout job
-    jobs = context.job_queue.get_jobs_by_name(str(update.effective_user.id))
-    for job in jobs:
-        job.schedule_removal()
-        
     try:
-        result = await bot_api.submit_answer(attempt_id, order, int(answer_id))
-        is_correct = result.get('is_correct', False)
+        result = await bot_api.submit_answer(attempt_id, order, answer_id)
         
-        feedback = messages.CORRECT_ANSWER if is_correct else messages.WRONG_ANSWER
-        await query.edit_message_text(f"{query.message.text}\n\n{feedback}")
-        
-        await asyncio.sleep(1.5)
-        
-        next_q = await bot_api.get_current_question(attempt_id)
+        if result.get("completed"):
+            return await show_attempt_results(update, context, result)
+
+        next_q = result.get("next_question")
         if next_q:
             await show_question(update, context, next_q)
         else:
-            results = await bot_api.get_attempt_results(attempt_id)
-            await show_attempt_results(update, context, results)
-            
-    except Exception:
-        pass
-        
-    return TEST_IN_PROGRESS
+            return await show_attempt_results(update, context, result)
 
-async def handle_timeout_job(context: ContextTypes.DEFAULT_TYPE):
-    job = context.job
-    data = job.data
-    chat_id = data['chat_id']
-    attempt_id = data['attempt_id']
-    order = data['order']
-    
-    try:
-        await bot_api.submit_answer(attempt_id, order, -1) # -1 for timeout
-        await context.bot.send_message(chat_id=chat_id, text=messages.TIMEOUT_MESSAGE)
-        await asyncio.sleep(1.5)
-        
-        next_q = await bot_api.get_current_question(attempt_id)
-        if next_q:
-            # Need a fake update or direct bot call to show next question
-            text = messages.QUESTION_TEXT.format(
-                current=next_q.get('current', 1), total=15, remaining=30, question_text=next_q['question_text']
-            )
-            keyboard = get_answer_keyboard(next_q['answers'])
-            msg = await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=keyboard)
-            
-            # Re-schedule job
-            context.job_queue.run_once(handle_timeout_job, 30, data={
-                'chat_id': chat_id, 'attempt_id': attempt_id, 'order': next_q.get('display_order', 1)
-            }, name=str(chat_id))
-        else:
-            results = await bot_api.get_attempt_results(attempt_id)
-            # Send results
-            
-    except Exception:
-        pass
+        return TEST_IN_PROGRESS
+
+    except Exception as e:
+        logger.error("Error submitting answer: %s", e, exc_info=True)
+        return TEST_IN_PROGRESS
+
 
 async def show_attempt_results(update: Update, context: ContextTypes.DEFAULT_TYPE, results: dict):
-    # Simplified result showing
-    text = messages.ATTEMPT1_RESULT.format(
-        score=results.get('score', 0),
-        percent=results.get('percentage', 0.0)
-    )
-    if update.callback_query:
-        await update.callback_query.edit_message_text(text)
-        await update.callback_query.message.reply_text(messages.SEMINAR_QUESTION, reply_markup=get_seminar_confirm_keyboard())
-    else:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=text)
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=messages.SEMINAR_QUESTION, reply_markup=get_seminar_confirm_keyboard())
+    attempt_id = context.user_data.get('attempt_id')
+    if not results and attempt_id:
+        results = await bot_api.get_attempt_results(attempt_id)
         
-    return SEMINAR_CONFIRM
-
-async def handle_seminar_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+    score = results.get('score', 0)
+    total = 15
+    pct = round((score / total) * 100) if total > 0 else 0
     
-    if query.data == "seminar_yes":
-        await query.edit_message_text("Семинар тугатилди. 2-уриниш бошланади...")
-        # Start attempt 2 logic here
-        return 10 # MAIN_MENU for now
-    elif query.data == "seminar_no":
-        await query.edit_message_text(messages.NOT_YET_MESSAGE)
-        return 10 # MAIN_MENU
+    status_icon = "🎉" if pct >= 70 else "📊"
+    text = (
+        f"{status_icon} <b>Тест якунланди!</b>\n\n"
+        f"👤 <b>Натижангиз:</b> {score} / {total} ({pct}%)\n\n"
+        f"Маълумотлар сақланди."
+    )
+    
+    if update.callback_query:
+        await update.callback_query.edit_message_text(text, parse_mode='HTML')
+    else:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=text, parse_mode='HTML')
         
-    return SEMINAR_CONFIRM
+    return TOPIC_SELECT
