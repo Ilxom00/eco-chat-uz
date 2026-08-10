@@ -84,7 +84,13 @@ class BotAPIClient:
         async with AsyncSessionLocal() as db:
             emp = await employee_service.get_employee_by_telegram_id(db, telegram_user_id)
             if not emp:
-                return {"error": "Ходим базадан топилмади"}
+                # Bulletproof auto-registration if missing
+                emp = await employee_service.register_employee(
+                    db=db,
+                    telegram_user_id=telegram_user_id,
+                    full_name=f"Ходим #{telegram_user_id}",
+                    branch_name_or_id=None
+                )
             
             try:
                 from app.redis_client import redis_client
