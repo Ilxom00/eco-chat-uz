@@ -1,17 +1,32 @@
+import uuid
+import logging
+from datetime import datetime
+import pytz
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, text
 from app.models.question import Question, QuestionAnswer
-from datetime import datetime
-import pytz
 
-async def create_question_with_answers(db: AsyncSession, topic_id: str, text: str, answers: list[dict]) -> Question:
+logger = logging.getLogger(__name__)
+
+
+def _to_uuid(val: str | uuid.UUID):
+    if isinstance(val, uuid.UUID):
+        return val
+    try:
+        return uuid.UUID(str(val))
+    except (ValueError, TypeError):
+        return val
+
+
+async def create_question_with_answers(db: AsyncSession, topic_id: str, text_content: str, answers: list[dict]) -> Question:
     if len(answers) != 4:
         raise ValueError("Exactly 4 answers required")
     if sum(1 for a in answers if a.get("is_correct")) != 1:
         raise ValueError("Exactly 1 correct answer required")
         
-    question = Question(topic_id=topic_id, text=text, status='ACTIVE')
+    tid_val = _to_uuid(topic_id)
+    question = Question(topic_id=tid_val, text=text_content, status='ACTIVE')
     db.add(question)
     await db.flush()
     
@@ -29,14 +44,18 @@ async def create_question_with_answers(db: AsyncSession, topic_id: str, text: st
     await db.refresh(question)
     return question
 
+
 async def delete_question_permanent(db: AsyncSession, question_id: str) -> bool:
-    await db.execute(text("DELETE FROM question_answers WHERE question_id = :qid"), {"qid": question_id})
-    await db.execute(text("DELETE FROM questions WHERE id = :qid"), {"qid": question_id})
+    qid_val = _to_uuid(question_id)
+    await db.execute(text("DELETE FROM question_answers WHERE question_id = :qid"), {"qid": qid_val})
+    await db.execute(text("DELETE FROM questions WHERE id = :qid"), {"qid": qid_val})
     await db.commit()
     return True
 
+
 async def archive_question(db: AsyncSession, question_id: str) -> Question:
-    result = await db.execute(select(Question).filter(Question.id == question_id))
+    qid_val = _to_uuid(question_id)
+    result = await db.execute(select(Question).filter(Question.id == qid_val))
     question = result.scalar_one_or_none()
     if question:
         question.status = 'ARCHIVED'
@@ -45,38 +64,56 @@ async def archive_question(db: AsyncSession, question_id: str) -> Question:
         await db.refresh(question)
     return question
 
+
 async def get_active_questions_for_topic(db: AsyncSession, topic_id: str) -> list[Question]:
-    result = await db.execute(select(Question).filter(Question.topic_id == topic_id, Question.status == 'ACTIVE'))
+    tid_val = _to_uuid(topic_id)
+    result = await db.execute(select(Question).filter(Question.topic_id == tid_val, Question.status == 'ACTIVE'))
     return result.scalars().all()
 
-async def get_questions_for_topic_paginated(db: AsyncSession, topic_id: str, page: int, page_size: int, include_archived: bool) -> tuple[list, int]:
-    query = select(Question).filter(Question.topic_id == topic_id)
-    if not include_archived:
-        query = query.filter(Question.status == 'ACTIVE')
+
+async def get_questions_for_topic_paginated(db: AsyncSession, topic_id: str, page: int, page_size: int, include_archived: bool = False) -> tuple[list, int]:
+    try:
+        tid_val = _to_uuid(topic_id)
+
+        query = select(Question).filter(Question.topic_id == tid_val)
+        if not include_archived:
+            query = query.filter(Question.status == 'ACTIVE')
+            
+        total_query = select(func.count()).select_from(Question).filter(Question.topic_id == tid_val)
+        if not include_archived:
+            total_query = total_query.filter(Question.status == 'ACTIVE')
+            
+        total = (await db.execute(total_query)).scalar() or 0
+        if total == 0:
+            return [], 0
+
+        query = query.order_by(Question.created_at.asc()).offset((page - 1) * page_size).limit(page_size)
+        questions_raw = (await db.execute(query)).scalars().all()
         
-    total_query = select(func.count()).select_from(Question).filter(Question.topic_id == topic_id)
-    if not include_archived:
-        total_query = total_query.filter(Question.status == 'ACTIVE')
+        result_list = []
+        for q in questions_raw:
+            ans_rows = (await db.execute(
+                select(QuestionAnswer)
+                .filter(QuestionAnswer.question_id == q.id)
+                .order_by(QuestionAnswer.sort_order)
+            )).scalars().all()
+
+            correct_ans = next((a.text for a in ans_rows if a.is_correct), "—")
+            options = [a.text for a in ans_rows]
+            result_list.append({
+                "id": str(q.id),
+                "text": q.text,
+                "correct_answer": correct_ans,
+                "options": options,
+                "status": q.status,
+                "created_at": q.created_at.isoformat() if q.created_at else None
+            })
         
-    total = (await db.execute(total_query)).scalar() or 0
-    query = query.order_by(Question.created_at.asc()).offset((page - 1) * page_size).limit(page_size)
-    questions_raw = (await db.execute(query)).scalars().all()
-    
-    result_list = []
-    for q in questions_raw:
-        ans_rows = (await db.execute(select(QuestionAnswer).filter(QuestionAnswer.question_id == q.id).order_by(QuestionAnswer.sort_order))).scalars().all()
-        correct_ans = next((a.text for a in ans_rows if a.is_correct), "—")
-        options = [a.text for a in ans_rows]
-        result_list.append({
-            "id": str(q.id),
-            "text": q.text,
-            "correct_answer": correct_ans,
-            "options": options,
-            "status": q.status,
-            "created_at": q.created_at.isoformat() if q.created_at else None
-        })
-    
-    return result_list, total
+        return result_list, total
+    except Exception as e:
+        logger.error("Error fetching questions for topic %s: %s", topic_id, e, exc_info=True)
+        return [], 0
+
 
 async def import_from_excel(db: AsyncSession, topic_id: str, file_bytes: bytes) -> dict:
     return {"success": True, "errors": [], "imported_count": 0}
