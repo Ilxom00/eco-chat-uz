@@ -19,7 +19,7 @@ async def get_or_create_employee(db: AsyncSession, telegram_user_id: int) -> tup
         return employee, False
 
     employee = Employee(
-        id=uuid.uuid4(),
+        id=str(uuid.uuid4()),
         telegram_user_id=tg_id,
         full_name="Unknown",
         registration_state="PENDING"
