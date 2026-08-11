@@ -1,3 +1,4 @@
+print("TEST REGISTER START")
 import urllib.request
 import json
 
@@ -8,6 +9,7 @@ headers = {
 }
 req = urllib.request.Request(url, data=json.dumps({}).encode(), headers=headers)
 try:
+    print("SENDING REQUEST TO:", url)
     with urllib.request.urlopen(req) as r:
         print("STATUS:", r.status)
         print("BODY:", r.read().decode())
