@@ -610,7 +610,7 @@ async def get_current_question_full(
 
     # Query topic details for display headers in bot
     topic = (
-        await db.execute(select(Topic).where(Topic.id == attempt.topic_id))
+        await db.execute(select(Topic).where(Topic.id == str(attempt.topic_id)))
     ).scalar_one_or_none()
     topic_name = f"{topic.short_name} — {topic.full_name}" if topic else "Мавзу"
 
