@@ -129,6 +129,15 @@ async def answer_question(attempt_id: str, data: dict, db: AsyncSession = Depend
     res = await test_engine.submit_answer(db, redis, attempt_id, data.get("display_order"), data.get("selected_answer_id"))
     return res
 
+@router.post("/attempt/{attempt_id}/timeout")
+async def timeout_question(attempt_id: str, data: dict, db: AsyncSession = Depends(get_db)):
+    aq_id = data.get("attempt_question_id")
+    res = await test_engine.handle_timeout(db, aq_id)
+    if not res.get("attempt_completed"):
+        nq = await test_engine.get_current_question_full(db, attempt_id)
+        res["next_question"] = nq
+    return res
+
 @router.get("/attempt/{attempt_id}/results")
 async def get_results(attempt_id: str, db: AsyncSession = Depends(get_db)):
     res = await test_engine.get_attempt_results(db, attempt_id)
