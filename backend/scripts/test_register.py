@@ -1,7 +1,7 @@
 import urllib.request
 import json
 
-url = "http://localhost:8000/internal/bot/bot/register"
+url = "http://127.0.0.1:8000/internal/bot/bot/register"
 headers = {
     "X-Internal-Secret": "eco-internal-secret-2024-prod",
     "Content-Type": "application/json"
