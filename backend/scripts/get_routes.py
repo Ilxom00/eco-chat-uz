@@ -1,9 +1,10 @@
+import inspect
 from app.main import app
 for r in app.routes:
-    if hasattr(r, "path"):
-        print(r.path)
-    elif hasattr(r, "include_context"):
-        ctx = r.include_context
-        prefix = ctx.prefix
-        for sub in ctx.included_router.routes:
-            print(prefix + sub.path)
+    print(r.__class__.__name__)
+    for name, value in inspect.getmembers(r):
+        if not name.startswith("__") and name not in ["app", "dependency_overrides_provider"]:
+            try:
+                print(f"  {name}: {type(value)}")
+            except Exception:
+                pass
