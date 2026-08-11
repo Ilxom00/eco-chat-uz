@@ -20,9 +20,11 @@ const Dashboard = {
         }
         const filterTopicEl = document.getElementById('filterTopic');
         const filterStatusEl = document.getElementById('filterStatus');
+        const filterBranchEl = document.getElementById('filterBranch');
         const pageSizeEl = document.getElementById('pageSizeSelect');
         if (filterTopicEl) filterTopicEl.addEventListener('change', () => this.loadEmployees(1));
         if (filterStatusEl) filterStatusEl.addEventListener('change', () => this.loadEmployees(1));
+        if (filterBranchEl) filterBranchEl.addEventListener('change', () => this.loadEmployees(1));
         if (pageSizeEl) pageSizeEl.addEventListener('change', () => this.loadEmployees(1));
 
         // Smart auto-refresh every 10 seconds
@@ -155,6 +157,7 @@ const Dashboard = {
             const search = (document.getElementById('empSearch')?.value || '').trim().toLowerCase();
             const filterTopic = document.getElementById('filterTopic')?.value || 'all';
             const filterStatus = document.getElementById('filterStatus')?.value || 'all';
+            const filterBranch = document.getElementById('filterBranch')?.value || 'all';
 
             // Fetch all items (up to 1000) to allow clean multi-criteria filtering client-side
             const data = await API.getDashboardEmployees({ page: 1, page_size: 1000 });
@@ -174,6 +177,22 @@ const Dashboard = {
                 return;
             }
 
+            // Dynamically populate branch select dropdown options once from fetched employees
+            const branchSelect = document.getElementById('filterBranch');
+            if (branchSelect && branchSelect.options.length <= 1 && data.items.length > 0) {
+                const branches = new Set();
+                data.items.forEach(emp => {
+                    if (emp.branch) branches.add(emp.branch);
+                });
+                const sortedBranches = Array.from(branches).sort();
+                sortedBranches.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b;
+                    opt.textContent = b;
+                    branchSelect.appendChild(opt);
+                });
+            }
+
             // Cache employee map
             this.employeesMap = {};
             data.items.forEach(emp => {
@@ -189,6 +208,11 @@ const Dashboard = {
                     (emp.name || '').toLowerCase().includes(search) || 
                     (emp.branch || '').toLowerCase().includes(search)
                 );
+            }
+
+            // 1.5 Apply Branch Filter
+            if (filterBranch !== 'all') {
+                filtered = filtered.filter(emp => emp.branch === filterBranch);
             }
 
             // 2. Apply Topic & Attempt Status Filters
@@ -414,6 +438,7 @@ const Dashboard = {
             const search = (document.getElementById('empSearch')?.value || '').trim().toLowerCase();
             const filterTopic = document.getElementById('filterTopic')?.value || 'all';
             const filterStatus = document.getElementById('filterStatus')?.value || 'all';
+            const filterBranch = document.getElementById('filterBranch')?.value || 'all';
 
             // Fetch ALL pages (up to 1000)
             const data = await API.getDashboardEmployees({ page: 1, page_size: 1000 });
@@ -425,6 +450,11 @@ const Dashboard = {
                     (emp.name || '').toLowerCase().includes(search) || 
                     (emp.branch || '').toLowerCase().includes(search)
                 );
+            }
+
+            // 1.5 Apply Branch Filter
+            if (filterBranch !== 'all') {
+                allItems = allItems.filter(emp => emp.branch === filterBranch);
             }
 
             // 2. Apply Topic & Attempt Status Filters
