@@ -753,6 +753,12 @@ async def submit_answer(
     if is_correct:
         attempt.score += 1
 
+    # Fetch topic details for bot headers
+    topic = (
+        await db.execute(select(Topic).where(Topic.id == str(attempt.topic_id)))
+    ).scalar_one_or_none()
+    topic_name = f"{topic.short_name} — {topic.full_name}" if topic else "Мавзу"
+
     # Advance to next question
     next_question_data = None
     attempt_completed = False
@@ -795,6 +801,8 @@ async def submit_answer(
                 "answers": safe_answers,
                 "remaining_seconds": settings.question_timer_seconds,
                 "attempt_question_id": str(next_aq.id),
+                "attempt_number": attempt.attempt_number,
+                "topic_name": topic_name,
             }
             # Fetch question text from snapshot
             etq_next = (
