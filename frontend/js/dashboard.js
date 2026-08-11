@@ -20,8 +20,10 @@ const Dashboard = {
         }
         const filterTopicEl = document.getElementById('filterTopic');
         const filterStatusEl = document.getElementById('filterStatus');
+        const pageSizeEl = document.getElementById('pageSizeSelect');
         if (filterTopicEl) filterTopicEl.addEventListener('change', () => this.loadEmployees(1));
         if (filterStatusEl) filterStatusEl.addEventListener('change', () => this.loadEmployees(1));
+        if (pageSizeEl) pageSizeEl.addEventListener('change', () => this.loadEmployees(1));
 
         // Smart auto-refresh every 10 seconds
         setInterval(() => {
@@ -239,9 +241,12 @@ const Dashboard = {
             const dynColspan = 3 + topicCount * 4 + 3;
             if (thead) thead.innerHTML = this.buildHeader(topicCount);
 
-            // 3. Paginate (10 items per page)
-            const startIndex = (page - 1) * 10;
-            const paginated = filtered.slice(startIndex, startIndex + 10);
+            // 3. Paginate based on customizable page size
+            const pageSizeVal = document.getElementById('pageSizeSelect')?.value || '20';
+            const pageSize = pageSizeVal === 'all' ? totalCount : parseInt(pageSizeVal, 10);
+
+            const startIndex = (page - 1) * pageSize;
+            const paginated = filtered.slice(startIndex, startIndex + pageSize);
 
             if (paginated.length === 0) {
                 tbody.innerHTML = `
@@ -250,7 +255,7 @@ const Dashboard = {
                         <div style="font-size:16px;font-weight:600;">Маълумот топилмади</div>
                         <div style="font-size:13px;margin-top:4px;">Филтр бўйича мос келувчи ходимлар мавжуд эмас</div>
                     </td></tr>`;
-                this.renderPagination(0, page);
+                this.renderPagination(0, page, pageSize);
                 return;
             }
 
@@ -309,7 +314,7 @@ const Dashboard = {
                 </tr>`;
             }).join('');
 
-            this.renderPagination(totalCount, page);
+            this.renderPagination(totalCount, page, pageSize);
 
         } catch (e) {
             console.error('Employees load error:', e);
@@ -320,10 +325,10 @@ const Dashboard = {
         }
     },
 
-    renderPagination(total, page) {
+    renderPagination(total, page, pageSize) {
         const container = document.getElementById('empPagination');
         if (!container) return;
-        const totalPages = Math.ceil(total / 10);
+        const totalPages = Math.ceil(total / pageSize);
         if (totalPages <= 1) { container.innerHTML = ''; return; }
         let html = '<div style="display:flex;gap:8px;justify-content:center;">';
         for (let p = 1; p <= totalPages; p++) {
@@ -405,16 +410,65 @@ const Dashboard = {
         if (btn) { btn.innerHTML = '⏳ Юкланмоқда...'; btn.disabled = true; }
 
         try {
-            // Fetch ALL pages
-            let allItems = [];
-            let page = 1;
-            while (true) {
-                const data = await API.getDashboardEmployees({ page, search: '' });
-                if (!data?.items?.length) break;
-                allItems = allItems.concat(data.items);
-                if (allItems.length >= (data.total || 0)) break;
-                page++;
+            // Get the active filters to export only the matching ones
+            const search = (document.getElementById('empSearch')?.value || '').trim().toLowerCase();
+            const filterTopic = document.getElementById('filterTopic')?.value || 'all';
+            const filterStatus = document.getElementById('filterStatus')?.value || 'all';
+
+            // Fetch ALL pages (up to 1000)
+            const data = await API.getDashboardEmployees({ page: 1, page_size: 1000 });
+            let allItems = data.items || [];
+
+            // 1. Apply Search
+            if (search) {
+                allItems = allItems.filter(emp => 
+                    (emp.name || '').toLowerCase().includes(search) || 
+                    (emp.branch || '').toLowerCase().includes(search)
+                );
             }
+
+            // 2. Apply Topic & Attempt Status Filters
+            if (filterTopic !== 'all' || filterStatus !== 'all') {
+                allItems = allItems.filter(emp => {
+                    const matchedTopics = (emp.topics || []).filter(t => {
+                        const isMatchTopic = (filterTopic === 'all' || String(t.num) === filterTopic);
+                        if (!isMatchTopic) return false;
+
+                        if (filterStatus === 'att1_done') return t.attempt1 !== null && t.attempt1 !== undefined;
+                        if (filterStatus === 'att1_pending') return t.attempt1 === null || t.attempt1 === undefined;
+                        if (filterStatus === 'att2_done') return t.attempt2 !== null && t.attempt2 !== undefined;
+                        if (filterStatus === 'att2_pending') return t.attempt2 === null || t.attempt2 === undefined;
+
+                        return true;
+                    });
+                    return matchedTopics.length > 0;
+                });
+            }
+
+            // 3. Sort them exactly like the UI ranks them
+            allItems.forEach(emp => {
+                let sumPct = 0;
+                let countAttempts = 0;
+                (emp.topics || []).forEach(t => {
+                    if (t.attempt1 !== null && t.attempt1 !== undefined) {
+                        sumPct += t.attempt1;
+                        countAttempts++;
+                    }
+                    if (t.attempt2 !== null && t.attempt2 !== undefined) {
+                        sumPct += t.attempt2;
+                        countAttempts++;
+                    }
+                });
+                emp._avgPct = countAttempts > 0 ? (sumPct / countAttempts) : 0;
+                emp._totalDuration = emp.total_duration_sec || 0;
+            });
+
+            allItems.sort((a, b) => {
+                if (b._avgPct !== a._avgPct) {
+                    return b._avgPct - a._avgPct;
+                }
+                return a._totalDuration - b._totalDuration;
+            });
 
             const topicCount = allItems[0]?.topics?.length || 4;
 
