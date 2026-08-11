@@ -35,8 +35,11 @@ async def cleanup():
             logger.info(f"Purged {aq_del.rowcount} attempt questions.")
 
         # Delete Employee Topic Questions
-        etq_del = await db.execute(delete(EmployeeTopicQuestion).where(EmployeeTopicQuestion.employee_id.in_(emp_ids)))
-        logger.info(f"Purged {etq_del.rowcount} employee topic questions.")
+        res_eta = await db.execute(select(EmployeeTopicAssignment.id).where(EmployeeTopicAssignment.employee_id.in_(emp_ids)))
+        eta_ids = [str(r) for r in res_eta.scalars().all()]
+        if eta_ids:
+            etq_del = await db.execute(delete(EmployeeTopicQuestion).where(EmployeeTopicQuestion.assignment_id.in_(eta_ids)))
+            logger.info(f"Purged {etq_del.rowcount} employee topic questions.")
 
         # Delete Test Attempts
         if emp_ids:
