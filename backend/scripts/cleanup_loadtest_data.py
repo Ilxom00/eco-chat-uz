@@ -5,7 +5,7 @@ Only targets entities with 'LOADTEST_' prefix.
 """
 import asyncio
 from sqlalchemy.future import select
-from sqlalchemy import delete
+from sqlalchemy import delete, update
 from app.database import AsyncSessionLocal
 from app.models.employee import Employee
 from app.models.attempt import TestAttempt, AttemptQuestion, EmployeeTopicAssignment, EmployeeTopicQuestion
@@ -40,6 +40,15 @@ async def cleanup():
         if eta_ids:
             etq_del = await db.execute(delete(EmployeeTopicQuestion).where(EmployeeTopicQuestion.assignment_id.in_(eta_ids)))
             logger.info(f"Purged {etq_del.rowcount} employee topic questions.")
+
+        # Clear attempt references in EmployeeTopicAssignment to avoid FK violations
+        if emp_ids:
+            await db.execute(
+                update(EmployeeTopicAssignment)
+                .where(EmployeeTopicAssignment.employee_id.in_(emp_ids))
+                .values(attempt1_id=None, attempt2_id=None)
+            )
+            logger.info("Cleared attempt1_id and attempt2_id references on assignments.")
 
         # Delete Test Attempts
         if emp_ids:
